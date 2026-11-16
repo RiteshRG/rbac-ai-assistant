@@ -12,12 +12,21 @@ from typing import Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
+from config.hr_csv import (
+    DEFAULT_RESULT_LIMIT,
+    MAX_FILTERS,
+    MAX_FILTER_VALUE_CHARS,
+    MAX_PLAN_MESSAGE_CHARS,
+    MAX_RESULT_ROWS,
+    MIN_FILTER_VALUE_CHARS,
+    MIN_RESULT_LIMIT,
+)
 from employee_profiles import (
     EmployeeAuthorizationContext,
     EmployeeRepositoryError,
 )
 
-PROJECT_ROOT = Path(__file__).resolve().parent
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_HR_CSV_PATH = PROJECT_ROOT / "DS-RPC-01" / "data" / "hr" / "hr_data.csv"
 
 CSV_COLUMNS = (
@@ -90,8 +99,6 @@ NUMERIC_COLUMNS = frozenset(
     }
 )
 SUM_COLUMNS = frozenset({"salary", "leave_balance", "leaves_taken"})
-MAX_RESULT_ROWS = 20
-MAX_FILTERS = 5
 MAX_REQUESTED_FIELDS = len(CSV_COLUMNS)
 FIELD_ALIASES = {
     "city": "location",
@@ -135,7 +142,10 @@ class CsvFilter(BaseModel):
 
     field: CsvColumn
     operator: CsvOperator
-    value: str = Field(min_length=1, max_length=200)
+    value: str = Field(
+        min_length=MIN_FILTER_VALUE_CHARS,
+        max_length=MAX_FILTER_VALUE_CHARS,
+    )
 
 
 class CsvOperationPlan(BaseModel):
@@ -144,7 +154,7 @@ class CsvOperationPlan(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     decision: CsvDecision = "query"
-    message: str | None = Field(default=None, max_length=200)
+    message: str | None = Field(default=None, max_length=MAX_PLAN_MESSAGE_CHARS)
     operation: CsvOperation | None = None
     filters: list[CsvFilter] = Field(default_factory=list, max_length=MAX_FILTERS)
     requested_fields: list[CsvColumn] = Field(
@@ -155,7 +165,11 @@ class CsvOperationPlan(BaseModel):
     aggregate_field: CsvColumn | None = None
     duplicate_field: CsvColumn | None = None
     group_field: CsvColumn | None = None
-    result_limit: int = Field(default=10, ge=1, le=MAX_RESULT_ROWS)
+    result_limit: int = Field(
+        default=DEFAULT_RESULT_LIMIT,
+        ge=MIN_RESULT_LIMIT,
+        le=MAX_RESULT_ROWS,
+    )
 
     @field_validator("requested_fields")
     @classmethod

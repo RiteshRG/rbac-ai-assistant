@@ -18,7 +18,7 @@
 | `app_api/routers/assistant.py` | Create | Implement the authenticated assistant ask route. |
 | `app_api/routers/health.py` | Create | Implement liveness and Firestore readiness routes. |
 | `employee_profiles.py` | Edit | Allow trusted Firestore authorization contexts while retaining SQLite and simulated contexts. |
-| `langgraph_console_skeleton.py`, `hr_csv_service.py` | Edit | Accept Firestore as an authorization-context source and revalidate the profile before HR CSV access. |
+| `langgraph_console_skeleton.py`, `hr_csv/service.py` | Edit | Accept Firestore as an authorization-context source and revalidate the profile before HR CSV access. |
 | `streamlit_app/app.py` | Create | Configure Streamlit navigation and public/protected page routing. |
 | `streamlit_app/theme.py`, `streamlit_app/.streamlit/config.toml` | Create | Apply the existing skill theme assets without duplicating page CSS. |
 | `streamlit_app/backend_client.py` | Create | Provide real HTTP and explicitly labelled mock clients; keep HTTP out of page modules. |

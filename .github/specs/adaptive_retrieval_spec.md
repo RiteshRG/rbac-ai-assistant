@@ -90,7 +90,7 @@ smallest implementation.
 
 ### Confirmed unaffected CSV workflow
 
-`hr_csv_agent.py` and `hr_csv_service.py` implement a separate validated,
+`hr_csv/agent.py` and `hr_csv/service.py` implement a separate validated,
 read-only HR CSV subgraph and service. The document-retrieval feature does not
 need changes to either file.
 
@@ -334,7 +334,7 @@ through the same `DocumentSearchService.search()` call path for every round.
 - `vector_service/chunking.py`, ingestion scripts, and Chroma setup: existing
   `source_file`, `section_path`, and `chunk_index` metadata is sufficient for
   deduplication. Neighbor fetching is not selected.
-- `hr_csv_agent.py`, `hr_csv_service.py`, `employee_profiles.py`, classifier
+- `hr_csv/agent.py`, `hr_csv/service.py`, `employee_profiles.py`, classifier
   behavior, provider configuration, dependencies, and console output.
 
 ## D. Open questions and risks

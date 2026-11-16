@@ -8,9 +8,14 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from config.api_limits import (
+    APP_TOKEN_TTL_MAX,
+    APP_TOKEN_TTL_MIN,
+    APP_TOKEN_TTL_SECONDS,
+    FIRESTORE_TIMEOUT_SECONDS,
+)
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-HISTORY_MAX_MESSAGES = 6
-HISTORY_MAX_MESSAGE_CHARS = 600
 
 
 class SettingsError(ValueError):
@@ -24,16 +29,20 @@ class AppSettings:
     app_token_secret: str = field(repr=False)
     app_token_issuer: str
     app_token_audience: str
-    app_token_ttl_seconds: int = 900
-    firestore_timeout_seconds: float = 10.0
+    app_token_ttl_seconds: int = APP_TOKEN_TTL_SECONDS
+    firestore_timeout_seconds: float = FIRESTORE_TIMEOUT_SECONDS
 
     @classmethod
     def from_environment(cls) -> AppSettings:
         load_dotenv(PROJECT_ROOT / ".env")
         try:
-            ttl = int(os.getenv("APP_TOKEN_TTL_SECONDS", "").strip() or "900")
+            ttl = int(
+                os.getenv("APP_TOKEN_TTL_SECONDS", "").strip()
+                or str(APP_TOKEN_TTL_SECONDS)
+            )
             firestore_timeout = float(
-                os.getenv("FIRESTORE_TIMEOUT_SECONDS", "").strip() or "10"
+                os.getenv("FIRESTORE_TIMEOUT_SECONDS", "").strip()
+                or str(FIRESTORE_TIMEOUT_SECONDS)
             )
         except ValueError as exc:
             raise SettingsError("App token lifetime or Firestore timeout is invalid.") from exc
@@ -77,7 +86,10 @@ class AppSettings:
             raise SettingsError("APP_TOKEN_SECRET must be at least 32 bytes.")
         if self.app_token_secret.casefold() in {"change-me", "replace-me", "placeholder"}:
             raise SettingsError("APP_TOKEN_SECRET must not be a placeholder.")
-        if not 60 <= self.app_token_ttl_seconds <= 86400:
-            raise SettingsError("APP_TOKEN_TTL_SECONDS must be between 60 and 86400.")
+        if not APP_TOKEN_TTL_MIN <= self.app_token_ttl_seconds <= APP_TOKEN_TTL_MAX:
+            raise SettingsError(
+                f"APP_TOKEN_TTL_SECONDS must be between {APP_TOKEN_TTL_MIN} "
+                f"and {APP_TOKEN_TTL_MAX}."
+            )
         if self.firestore_timeout_seconds <= 0:
             raise SettingsError("FIRESTORE_TIMEOUT_SECONDS must be positive.")

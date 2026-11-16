@@ -13,13 +13,16 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, Sequence
 
+from config.security import (
+    PASSWORD_HASH_BYTES,
+    PASSWORD_SALT_BYTES,
+    PASSWORD_SCRYPT_N,
+    PASSWORD_SCRYPT_P,
+    PASSWORD_SCRYPT_R,
+)
+
 PROJECT_ROOT = Path(__file__).resolve().parent
 DEFAULT_EMPLOYEE_DATABASE = PROJECT_ROOT / "data" / "app.sqlite3"
-PASSWORD_SCRYPT_N = 2**14
-PASSWORD_SCRYPT_R = 8
-PASSWORD_SCRYPT_P = 1
-PASSWORD_SALT_BYTES = 16
-PASSWORD_HASH_BYTES = 32
 
 
 class EmployeeRepositoryError(RuntimeError):

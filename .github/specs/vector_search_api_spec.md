@@ -88,7 +88,7 @@ answer generation, HR CSV handling, or console output.
 
 ### Confirmed unaffected HR CSV path
 
-`hr_csv_agent.py` and `hr_csv_service.py` do not import Chroma or `vector_db`.
+`hr_csv/agent.py` and `hr_csv/service.py` do not import Chroma or `vector_db`.
 The HR CSV is a separate local, read-only data source handled by
 `HrCsvQueryService`. It remains in the application and is never copied,
 ingested, or sent to the vector service. No changes to either HR file are
@@ -413,7 +413,7 @@ them. The persistent-path decision is an open question below.
   `.github/specs/langgraph-console-skeleton-spec.md`.
 
 No other files may change. In particular, do not edit
-`employee_profiles.py`, `hr_csv_agent.py`, `hr_csv_service.py`, the classifier,
+`employee_profiles.py`, `hr_csv/agent.py`, `hr_csv/service.py`, the classifier,
 or model/provider configuration. The client uses the existing profile
 repository contract; the vector API receives only verified group claims.
 

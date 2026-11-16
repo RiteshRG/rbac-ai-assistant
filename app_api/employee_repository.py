@@ -7,6 +7,7 @@ from typing import Any
 
 from google.api_core.exceptions import GoogleAPICallError
 
+from config.api_limits import FIRESTORE_TIMEOUT_SECONDS
 from employee_profiles import EmployeeAuthorizationContext, EmployeeRepositoryError
 from vector_service.retrieval import AuthorizationError, effective_access_groups
 
@@ -30,7 +31,11 @@ class EmployeeProfile:
 
 
 class FirestoreEmployeeRepository:
-    def __init__(self, database: Any, timeout_seconds: float = 10.0) -> None:
+    def __init__(
+        self,
+        database: Any,
+        timeout_seconds: float = FIRESTORE_TIMEOUT_SECONDS,
+    ) -> None:
         self._database = database
         self._timeout_seconds = timeout_seconds
         self._employees = database.collection("employees")

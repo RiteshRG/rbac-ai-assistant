@@ -7,14 +7,31 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from config.api_limits import (
+    CHAT_ID_MAX_LENGTH,
+    CHAT_ID_MIN_LENGTH,
+    EMPLOYEE_ID_MAX_LENGTH,
+    EMPLOYEE_ID_MIN_LENGTH,
+    PASSWORD_MAX_LENGTH,
+    PASSWORD_MIN_LENGTH,
+    QUESTION_MAX_LENGTH,
+    QUESTION_MIN_LENGTH,
+)
+
 
 class StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
 class LoginRequest(StrictModel):
-    employee_id: str = Field(min_length=1, max_length=128)
-    password: str = Field(min_length=1, max_length=1024)
+    employee_id: str = Field(
+        min_length=EMPLOYEE_ID_MIN_LENGTH,
+        max_length=EMPLOYEE_ID_MAX_LENGTH,
+    )
+    password: str = Field(
+        min_length=PASSWORD_MIN_LENGTH,
+        max_length=PASSWORD_MAX_LENGTH,
+    )
 
     @field_validator("employee_id")
     @classmethod
@@ -40,15 +57,25 @@ class MeResponse(BaseModel):
 
 
 class AskRequest(StrictModel):
-    question: str = Field(min_length=1, max_length=2000)
-    chat_id: str | None = Field(default=None, min_length=1, max_length=128)
+    question: str = Field(
+        min_length=QUESTION_MIN_LENGTH,
+        max_length=QUESTION_MAX_LENGTH,
+    )
+    chat_id: str | None = Field(
+        default=None,
+        min_length=CHAT_ID_MIN_LENGTH,
+        max_length=CHAT_ID_MAX_LENGTH,
+    )
 
     @field_validator("question")
     @classmethod
     def trim_question(cls, value: str) -> str:
         value = value.strip()
-        if not value or len(value) > 2000:
-            raise ValueError("Question must contain 1 to 2000 characters.")
+        if not value or len(value) > QUESTION_MAX_LENGTH:
+            raise ValueError(
+                f"Question must contain {QUESTION_MIN_LENGTH} to "
+                f"{QUESTION_MAX_LENGTH} characters."
+            )
         return value
 
     @field_validator("chat_id")

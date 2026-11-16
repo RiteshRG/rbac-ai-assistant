@@ -15,14 +15,20 @@ from urllib.request import urlopen
 
 from dotenv import dotenv_values
 
+from config.runtime import (
+    API_HOST,
+    API_PORT,
+    HEALTH_PROBE_TIMEOUT_SECONDS,
+    POLL_INTERVAL_SECONDS,
+    SHUTDOWN_TIMEOUT_SECONDS,
+    STARTUP_TIMEOUT_SECONDS,
+    STREAMLIT_PORT,
+    VECTOR_HOST,
+    VECTOR_PORT,
+)
+
 PROJECT_ROOT = Path(__file__).resolve().parent
 STREAMLIT_APP = PROJECT_ROOT / "streamlit_app"
-API_HOST = "127.0.0.1"
-API_PORT = 8000
-VECTOR_HOST = "127.0.0.1"
-VECTOR_PORT = 8001
-STREAMLIT_PORT = 8501
-STARTUP_TIMEOUT_SECONDS = 30
 
 
 def _environment_from_dotenv() -> dict[str, str]:
@@ -75,11 +81,11 @@ def _wait_for_service(
                 f"The {service_name} process exited during startup (exit code {exit_code})."
             )
         try:
-            with urlopen(url, timeout=1) as response:
+            with urlopen(url, timeout=HEALTH_PROBE_TIMEOUT_SECONDS) as response:
                 if response.status == 200:
                     return
         except (OSError, URLError, TimeoutError):
-            time.sleep(0.25)
+            time.sleep(POLL_INTERVAL_SECONDS)
     raise TimeoutError(
         f"{service_name} did not become ready within {STARTUP_TIMEOUT_SECONDS} seconds."
     )
@@ -184,7 +190,7 @@ def _stop_process(process: subprocess.Popen | None) -> None:
         return
     process.terminate()
     try:
-        process.wait(timeout=8)
+        process.wait(timeout=SHUTDOWN_TIMEOUT_SECONDS)
     except subprocess.TimeoutExpired:
         process.kill()
         process.wait()
@@ -276,7 +282,7 @@ def main() -> int:
                     f"(exit code {vector_exit})."
                 )
                 return vector_exit or 1
-            time.sleep(0.25)
+            time.sleep(POLL_INTERVAL_SECONDS)
     finally:
         _stop_process(streamlit_process)
         _stop_process(api_process)

@@ -8,7 +8,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from hr_csv_agent import create_hr_csv_graph, initial_state  # noqa: E402
+from hr_csv.agent import create_hr_csv_graph, initial_state  # noqa: E402
 from llm_config import create_chat_model  # noqa: E402
 
 

@@ -14,6 +14,13 @@ from dotenv import load_dotenv
 from firebase_admin import credentials, firestore
 from google.api_core.exceptions import AlreadyExists, GoogleAPICallError
 
+from config.security import (
+    PASSWORD_HASH_BYTES,
+    PASSWORD_SALT_BYTES,
+    PASSWORD_SCRYPT_N,
+    PASSWORD_SCRYPT_P,
+    PASSWORD_SCRYPT_R,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 load_dotenv(PROJECT_ROOT / ".env")
@@ -35,13 +42,6 @@ LOGIN_COLUMNS = {
     "information_accessible_departments",
 }
 MAPPING_COLUMNS = {"employee_id", "department", "job_title"}
-PASSWORD_SCRYPT_N = 2**14
-PASSWORD_SCRYPT_R = 8
-PASSWORD_SCRYPT_P = 1
-PASSWORD_SALT_BYTES = 16
-PASSWORD_HASH_BYTES = 32
-
-
 def configured_path(variable_name: str, default_name: str) -> Path:
     value = os.getenv(variable_name, default_name)
     path = Path(value).expanduser()

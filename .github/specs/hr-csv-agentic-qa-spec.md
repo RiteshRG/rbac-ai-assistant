@@ -142,13 +142,13 @@ needed for the answer and only under the approved hosted-model data policy.
 
 Phase 1 has implemented the following reusable components:
 
-- **Read-only CSV service** in `hr_csv_service.py`: uses Python's standard
+- **Read-only CSV service** in `hr_csv/service.py`: uses Python's standard
   library `csv`, reads only the fixed project-relative CSV path, checks the
   exact header and typed values, and executes the allowlisted operations below.
 - **Validated operation plan**: `CsvOperationPlan`, `parse_operation_plan`,
   and `validate_operation_plan` define the JSON plan, normalize field aliases,
   and reject unsupported fields, operators, and operation/field combinations.
-- **Standalone CSV LangGraph** in `hr_csv_agent.py`: validates the request,
+- **Standalone CSV LangGraph** in `hr_csv/agent.py`: validates the request,
   checks the simulated HR profile before planning or file access, asks the
   selected model for a JSON plan, validates and executes it, and asks the model
   to formulate a concise answer from the bounded result.
@@ -234,7 +234,7 @@ ChromaDB, or the main graph to run.
 
 Implemented entry points and tests:
 
-- `hr_csv_service.py` and `hr_csv_agent.py` contain the service and graph.
+- `hr_csv/service.py` and `hr_csv/agent.py` contain the service and graph.
 - `scripts/hr_csv_agent_test.py` is the interactive console entry point.
 - `tests/test_hr_csv_agent.py` contains offline `unittest` coverage.
 - `tests/run_eval.py` runs the 12 cases in `tests/eval_questions.txt` against

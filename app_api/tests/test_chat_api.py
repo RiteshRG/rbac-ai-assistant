@@ -14,10 +14,9 @@ from app_api.employee_repository import EmployeeProfile
 from app_api.graph_service import AssistantResult, GENERIC_ERROR_ANSWER
 from app_api.main import create_app
 from app_api.settings import (
-    HISTORY_MAX_MESSAGE_CHARS,
-    HISTORY_MAX_MESSAGES,
     AppSettings,
 )
+from config.history import HISTORY_MAX_MESSAGE_CHARS, HISTORY_MAX_MESSAGES
 from employee_profiles import hash_password
 
 

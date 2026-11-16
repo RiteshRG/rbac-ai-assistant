@@ -14,8 +14,15 @@ from urllib.request import Request, urlopen
 
 import jwt
 
+from config.retrieval import DEFAULT_SEARCH_TOP_K
+from config.vector_client import (
+    MAX_RESPONSE_BYTES,
+    VECTOR_SEARCH_TIMEOUT_SECONDS,
+    VECTOR_TOKEN_TTL_MAX,
+    VECTOR_TOKEN_TTL_MIN,
+    VECTOR_TOKEN_TTL_SECONDS,
+)
 
-MAX_RESPONSE_BYTES = 1_000_000
 RESULT_FIELDS = {
     "text",
     "access_group",
@@ -45,7 +52,7 @@ class DocumentSearch(Protocol):
         self,
         employee_id: str,
         query: str,
-        n_results: int = 5,
+        n_results: int = DEFAULT_SEARCH_TOP_K,
     ) -> list[DocumentResult]:
         """Return profile-authorized chunks for a document question."""
         ...
@@ -92,15 +99,26 @@ class RemoteSearchConfig:
 
         try:
             timeout_seconds = float(
-                os.getenv("VECTOR_SEARCH_TIMEOUT_SECONDS", "5")
+                os.getenv(
+                    "VECTOR_SEARCH_TIMEOUT_SECONDS",
+                    str(VECTOR_SEARCH_TIMEOUT_SECONDS),
+                )
             )
-            token_ttl_seconds = int(os.getenv("VECTOR_TOKEN_TTL_SECONDS", "90"))
+            token_ttl_seconds = int(
+                os.getenv(
+                    "VECTOR_TOKEN_TTL_SECONDS",
+                    str(VECTOR_TOKEN_TTL_SECONDS),
+                )
+            )
         except ValueError as exc:
             raise ValueError("Vector search timeout or token lifetime is invalid.") from exc
         if not math.isfinite(timeout_seconds) or timeout_seconds <= 0:
             raise ValueError("VECTOR_SEARCH_TIMEOUT_SECONDS must be positive.")
-        if not 60 <= token_ttl_seconds <= 120:
-            raise ValueError("VECTOR_TOKEN_TTL_SECONDS must be between 60 and 120.")
+        if not VECTOR_TOKEN_TTL_MIN <= token_ttl_seconds <= VECTOR_TOKEN_TTL_MAX:
+            raise ValueError(
+                f"VECTOR_TOKEN_TTL_SECONDS must be between {VECTOR_TOKEN_TTL_MIN} "
+                f"and {VECTOR_TOKEN_TTL_MAX}."
+            )
 
         return cls(
             service_url=service_url.rstrip("/"),
@@ -128,7 +146,7 @@ class LocalDocumentSearchAdapter:
         self,
         employee_id: str,
         query: str,
-        n_results: int = 5,
+        n_results: int = DEFAULT_SEARCH_TOP_K,
     ) -> list[DocumentResult]:
         if self._service is None:
             collection = self._collection
@@ -179,7 +197,7 @@ class RemoteDocumentSearchAdapter:
         self,
         employee_id: str,
         query: str,
-        n_results: int = 5,
+        n_results: int = DEFAULT_SEARCH_TOP_K,
     ) -> list[DocumentResult]:
         groups = self._resolve_groups(employee_id)
         token = self._token_for(employee_id, groups)

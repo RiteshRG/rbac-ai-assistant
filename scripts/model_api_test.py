@@ -8,10 +8,8 @@ from typing import Any
 from dotenv import load_dotenv
 from langchain_core.language_models.chat_models import BaseChatModel
 
-from llm_config import DEFAULT_REQUEST_TIMEOUT_SECONDS, create_chat_model
-
-
-REQUEST_TIMEOUT_SECONDS = DEFAULT_REQUEST_TIMEOUT_SECONDS
+from config.llm import REQUEST_TIMEOUT_SECONDS
+from llm_config import create_chat_model
 
 
 def create_selected_model() -> BaseChatModel:

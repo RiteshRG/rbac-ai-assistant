@@ -50,7 +50,7 @@ PHASE A: READ AND WRITE A SPEC (NO CODE CHANGES)
 1. Read: `.github/skills/streamlit-firebase-ui/**`, `.github/project_details.md`,
    `.github/copilot-instructions.md`, `.github/progress-notes/current-state.md`,
    `.github/specs/*`, `langgraph_console_skeleton.py` (build_graph, create_llm,
-   GraphState, run_console, status assignments), `hr_csv_agent.py` (statuses
+   GraphState, run_console, status assignments), `hr_csv/agent.py` (statuses
    only), `llm_config.py`, `employee_profiles.py` (hash_password,
    verify_password, SQLiteEmployeeRepository interface and
    `_authorization_context`), `scripts/provision_employees.py` (Firestore

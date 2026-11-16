@@ -6,7 +6,8 @@ from typing import Any, Callable
 
 from firebase_admin import firestore
 
-from app_api.settings import HISTORY_MAX_MESSAGE_CHARS, HISTORY_MAX_MESSAGES
+from config.api_limits import CHAT_LIST_LIMIT, CHAT_MESSAGE_LIMIT, FIRESTORE_TIMEOUT_SECONDS
+from config.history import HISTORY_MAX_MESSAGE_CHARS, HISTORY_MAX_MESSAGES
 
 
 class ChatNotFound(Exception):
@@ -18,7 +19,11 @@ class ChatPolicyChanged(Exception):
 
 
 class FirestoreChatStore:
-    def __init__(self, database: Any, timeout_seconds: float = 10.0) -> None:
+    def __init__(
+        self,
+        database: Any,
+        timeout_seconds: float = FIRESTORE_TIMEOUT_SECONDS,
+    ) -> None:
         self._database = database
         self._timeout_seconds = timeout_seconds
 
@@ -26,7 +31,7 @@ class FirestoreChatStore:
         self,
         employee_id: str,
         policy_version: str,
-        limit: int = 50,
+        limit: int = CHAT_LIST_LIMIT,
     ) -> list[dict[str, Any]]:
         query = (
             self._database.collection("employees")
@@ -56,7 +61,7 @@ class FirestoreChatStore:
         employee_id: str,
         chat_id: str,
         policy_version: str,
-        limit: int = 100,
+        limit: int = CHAT_MESSAGE_LIMIT,
     ) -> list[dict[str, Any]]:
         chat_ref = self._chat_ref(employee_id, chat_id)
         snapshot = chat_ref.get(timeout=self._timeout_seconds)

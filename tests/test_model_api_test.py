@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import unittest
 
-from model_api_test import ask_model, extract_text, selected_model_description
+from scripts.model_api_test import ask_model, extract_text, selected_model_description
 
 
 class FakeModel:
@@ -47,7 +47,7 @@ class SelectedModelApiTestTests(unittest.TestCase):
     def test_selected_model_description_uses_active_provider_without_key(self):
         from unittest.mock import patch
 
-        with patch("model_api_test.load_dotenv"), patch.dict(
+        with patch("scripts.model_api_test.load_dotenv"), patch.dict(
             "os.environ",
             {"LLM_PROVIDER": "groq", "GROQ_MODEL": "test-groq-model"},
             clear=True,

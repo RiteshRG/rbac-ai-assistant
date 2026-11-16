@@ -17,8 +17,8 @@ from employee_profiles import (
     SQLiteEmployeeRepository,
     hash_password,
 )
-from hr_csv_agent import create_hr_csv_graph, initial_state
-from hr_csv_service import (
+from hr_csv.agent import create_hr_csv_graph, initial_state
+from hr_csv.service import (
     AmbiguousEmployeeError,
     CSV_COLUMNS,
     CsvAccessDeniedError,

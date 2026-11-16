@@ -45,7 +45,7 @@ existing `llm_config.py` rather than assuming or introducing another provider.
   grounded answering/citations, and a route to the existing HR CSV graph.
   Document questions use graph-owned adaptive retrieval through the same
   local-or-remote search interface.
-- **HR CSV Phase 1:** `hr_csv_agent.py` and `hr_csv_service.py` implement a
+- **HR CSV Phase 1:** `hr_csv/agent.py` and `hr_csv/service.py` implement a
   standalone, read-only question-answering graph with a constrained structured
   plan, validation, supported date/location operations, and a final answer.
 - **HR CSV main-graph integration:** the main console reuses the Phase 1 graph

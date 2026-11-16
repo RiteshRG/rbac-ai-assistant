@@ -9,11 +9,11 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_groq import ChatGroq
 
-DEFAULT_REQUEST_TIMEOUT_SECONDS = 60
+from config.llm import MAX_RETRIES, REQUEST_TIMEOUT_SECONDS, TEMPERATURE
 
 
 def create_chat_model(
-    request_timeout: float = DEFAULT_REQUEST_TIMEOUT_SECONDS,
+    request_timeout: float = REQUEST_TIMEOUT_SECONDS,
 ) -> BaseChatModel:
     """Create the provider selected by LLM_PROVIDER using its own API key/model.
 
@@ -37,9 +37,9 @@ def create_chat_model(
         return ChatGoogleGenerativeAI(
             model=model_name,
             api_key=api_key,
-            temperature=0.1,
+            temperature=TEMPERATURE,
             request_timeout=request_timeout,
-            retries=0,
+            retries=MAX_RETRIES,
         )
 
     if provider == "groq":
@@ -52,9 +52,9 @@ def create_chat_model(
         return ChatGroq(
             model=model_name,
             api_key=api_key,
-            temperature=0.1,
+            temperature=TEMPERATURE,
             timeout=request_timeout,
-            max_retries=0,
+            max_retries=MAX_RETRIES,
         )
 
     raise ValueError(

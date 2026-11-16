@@ -10,6 +10,8 @@ from uuid import uuid4
 
 import httpx
 
+from config.api_limits import ASSISTANT_API_TIMEOUT_SECONDS
+
 
 class BackendError(RuntimeError):
     def __init__(
@@ -265,7 +267,10 @@ def create_backend_client(
         timeout = (
             float(timeout_seconds)
             if timeout_seconds is not None
-            else float(os.getenv("ASSISTANT_API_TIMEOUT_SECONDS", "").strip() or "20")
+            else float(
+                os.getenv("ASSISTANT_API_TIMEOUT_SECONDS", "").strip()
+                or str(ASSISTANT_API_TIMEOUT_SECONDS)
+            )
         )
     except ValueError as exc:
         raise ValueError("ASSISTANT_API_TIMEOUT_SECONDS must be a positive number.") from exc

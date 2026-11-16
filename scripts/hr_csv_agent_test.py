@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from hr_csv_agent import create_hr_csv_graph, initial_state, operation_summary
+from hr_csv.agent import create_hr_csv_graph, initial_state, operation_summary
 from llm_config import create_chat_model
 
 PROFILE_CHOICES = ("Engineering", "Finance", "General", "HR", "Marketing", "All")

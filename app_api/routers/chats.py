@@ -9,6 +9,7 @@ from app_api.auth import require_employee
 from app_api.chat_store import ChatNotFound, ChatPolicyChanged
 from app_api.employee_repository import EmployeeProfile
 from app_api.schemas import ChatMessageResponse, ChatSummaryResponse
+from config.api_limits import CHAT_LIMIT_MIN, CHAT_LIST_LIMIT, CHAT_MESSAGE_LIMIT
 
 router = APIRouter()
 
@@ -16,7 +17,7 @@ router = APIRouter()
 @router.get("/v1/chats", response_model=list[ChatSummaryResponse])
 def list_chats(
     request: Request,
-    limit: int = Query(default=50, ge=1, le=50),
+    limit: int = Query(default=CHAT_LIST_LIMIT, ge=CHAT_LIMIT_MIN, le=CHAT_LIST_LIMIT),
     profile: EmployeeProfile = Depends(require_employee),
 ) -> list[ChatSummaryResponse]:
     try:
@@ -44,7 +45,11 @@ def list_chats(
 def get_messages(
     request: Request,
     chat_id: str,
-    limit: int = Query(default=100, ge=1, le=100),
+    limit: int = Query(
+        default=CHAT_MESSAGE_LIMIT,
+        ge=CHAT_LIMIT_MIN,
+        le=CHAT_MESSAGE_LIMIT,
+    ),
     profile: EmployeeProfile = Depends(require_employee),
 ) -> list[ChatMessageResponse]:
     try:
