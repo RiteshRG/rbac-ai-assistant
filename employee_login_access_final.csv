@@ -1,0 +1,99 @@
+employee_id,email,password,information_accessible_departments
+FINEMP1000,aadhya.patel@fintechco.com,1234_marketing,General; Marketing
+FINEMP1001,isha.chowdhury@fintechco.com,1234_finance,General; Finance
+FINEMP1002,sakshi.malhotra@fintechco.com,1234_marketing,General; Marketing
+FINEMP1003,krishna.malhotra@fintechco.com,1234_general,General
+FINEMP1004,aadhya.saxena@fintechco.com,1234_marketing,General; Marketing
+FINEMP1005,shaurya.joshi@fintechco.com,1234_finance,General; Finance
+FINEMP1006,sara.sharma@fintechco.com,1234_engineering,General; Engineering
+FINEMP1007,prisha.mehta@fintechco.com,1234_marketing,General; Marketing
+FINEMP1008,aadhya.chowdhury@fintechco.com,1234_general,General
+FINEMP1009,sai.gupta@fintechco.com,1234_finance,General; Finance
+FINEMP1010,vihaan.chowdhury@fintechco.com,1234_hr,General; HR
+FINEMP1011,sai.sharma@fintechco.com,1234_general,General
+FINEMP1012,ishaan.patel@fintechco.com,1234_engineering,General; Engineering
+FINEMP1013,prisha.banerjee@fintechco.com,1234_engineering,General; Engineering
+FINEMP1014,isha.desai@fintechco.com,1234_finance,General; Finance
+FINEMP1015,ananya.singh@fintechco.com,1234_hr,General; HR
+FINEMP1016,ananya.reddy@fintechco.com,1234_marketing,General; Marketing
+FINEMP1017,prisha.saxena@fintechco.com,1234_engineering,General; Engineering
+FINEMP1018,vivaan.reddy@fintechco.com,1234_general,General
+FINEMP1019,isha.chowdhury@fintechco.com,1234_marketing,General; Marketing
+FINEMP1020,krishna.verma@fintechco.com,1234_marketing,General; Marketing
+FINEMP1021,vihaan.verma@fintechco.com,1234_finance,General; Finance
+FINEMP1022,sai.khan@fintechco.com,1234_general,General
+FINEMP1023,krishna.gupta@fintechco.com,1234_general,General
+FINEMP1024,reyansh.mehta@fintechco.com,1234_engineering,General; Engineering
+FINEMP1025,krishna.reddy@fintechco.com,1234_marketing,General; Marketing
+FINEMP1027,myra.desai@fintechco.com,1234_engineering,General; Engineering
+FINEMP1028,isha.nair@fintechco.com,1234_general,General
+FINEMP1029,aditya.patel@fintechco.com,1234_engineering,General; Engineering
+FINEMP1030,vihaan.reddy@fintechco.com,1234_engineering,General; Engineering
+FINEMP1031,isha.desai@fintechco.com,1234_general,General
+FINEMP1032,arjun.desai@fintechco.com,1234_finance,General; Finance
+FINEMP1033,saanvi.bhat@fintechco.com,1234_finance,General; Finance
+FINEMP1034,diya.desai@fintechco.com,1234_marketing,General; Marketing
+FINEMP1035,arjun.chopra@fintechco.com,1234_finance,General; Finance
+FINEMP1036,avni.khan@fintechco.com,1234_general,General
+FINEMP1037,vihaan.garg@fintechco.com,1234_marketing,General; Marketing
+FINEMP1038,diya.bhat@fintechco.com,1234_engineering,General; Engineering
+FINEMP1039,sai.desai@fintechco.com,1234_engineering,General; Engineering
+FINEMP1041,shaurya.joshi@fintechco.com,1234_marketing,General; Marketing
+FINEMP1042,vihaan.desai@fintechco.com,1234_general,General
+FINEMP1043,aadhya.singh@fintechco.com,1234_marketing,General; Marketing
+FINEMP1044,isha.desai@fintechco.com,1234_engineering,General; Engineering
+FINEMP1045,ananya.banerjee@fintechco.com,1234_engineering,General; Engineering
+FINEMP1046,shaurya.joshi@fintechco.com,1234_marketing,General; Marketing
+FINEMP1047,ishaan.singh@fintechco.com,1234_general,General
+FINEMP1048,isha.singh@fintechco.com,1234_finance,General; Finance
+FINEMP1049,arjun.garg@fintechco.com,1234_engineering,General; Engineering
+FINEMP1050,myra.gupta@fintechco.com,1234_engineering,General; Engineering
+FINEMP1051,reyansh.saxena@fintechco.com,1234_engineering,General; Engineering
+FINEMP1052,ishaan.singh@fintechco.com,1234_marketing,General; Marketing
+FINEMP1053,isha.sharma@fintechco.com,1234_general,General
+FINEMP1054,ishaan.singh@fintechco.com,1234_engineering,General; Engineering
+FINEMP1055,aditya.saxena@fintechco.com,1234_hr,General; HR
+FINEMP1056,saanvi.bhat@fintechco.com,1234_engineering,General; Engineering
+FINEMP1057,aditya.kapoor@fintechco.com,1234_marketing,General; Marketing
+FINEMP1058,avni.chopra@fintechco.com,1234_finance,General; Finance
+FINEMP1059,saanvi.malhotra@fintechco.com,1234_general,General
+FINEMP1060,arjun.mehta@fintechco.com,1234_marketing,General; Marketing
+FINEMP1061,vivaan.chowdhury@fintechco.com,1234_engineering,General; Engineering
+FINEMP1062,ananya.iyer@fintechco.com,1234_engineering,General; Engineering
+FINEMP1063,aadhya.kapoor@fintechco.com,1234_finance,General; Finance
+FINEMP1064,saanvi.nair@fintechco.com,1234_finance,General; Finance
+FINEMP1065,myra.garg@fintechco.com,1234_engineering,General; Engineering
+FINEMP1066,diya.iyer@fintechco.com,1234_marketing,General; Marketing
+FINEMP1067,shaurya.chopra@fintechco.com,1234_general,General
+FINEMP1068,shaurya.singh@fintechco.com,1234_engineering,General; Engineering
+FINEMP1069,vivaan.saxena@fintechco.com,1234_finance,General; Finance
+FINEMP1070,saanvi.banerjee@fintechco.com,1234_finance,General; Finance
+FINEMP1071,vivaan.verma@fintechco.com,1234_finance,General; Finance
+FINEMP1072,saanvi.gupta@fintechco.com,1234_engineering,General; Engineering
+FINEMP1073,diya.nair@fintechco.com,1234_marketing,General; Marketing
+FINEMP1074,vihaan.chopra@fintechco.com,1234_marketing,General; Marketing
+FINEMP1075,ananya.khan@fintechco.com,1234_engineering,General; Engineering
+FINEMP1076,avni.chowdhury@fintechco.com,1234_finance,General; Finance
+FINEMP1077,krishna.nair@fintechco.com,1234_engineering,General; Engineering
+FINEMP1078,prisha.chopra@fintechco.com,1234_engineering,General; Engineering
+FINEMP1079,krishna.iyer@fintechco.com,1234_finance,General; Finance
+FINEMP1080,avni.reddy@fintechco.com,1234_engineering,General; Engineering
+FINEMP1081,sakshi.malhotra@fintechco.com,1234_finance,General; Finance
+FINEMP1082,vihaan.chowdhury@fintechco.com,1234_finance,General; Finance
+FINEMP1083,krishna.malhotra@fintechco.com,1234_marketing,General; Marketing
+FINEMP1084,saanvi.chowdhury@fintechco.com,1234_general,General
+FINEMP1085,aadhya.mehta@fintechco.com,1234_engineering,General; Engineering
+FINEMP1086,diya.iyer@fintechco.com,1234_engineering,General; Engineering
+FINEMP1087,avni.nair@fintechco.com,1234_marketing,General; Marketing
+FINEMP1088,avni.chowdhury@fintechco.com,1234_general,General
+FINEMP1089,aarav.joshi@fintechco.com,1234_engineering,General; Engineering
+FINEMP1090,arjun.chowdhury@fintechco.com,1234_engineering,General; Engineering
+FINEMP1091,diya.desai@fintechco.com,1234_general,General
+FINEMP1092,ananya.nair@fintechco.com,1234_hr,General; HR
+FINEMP1093,shaurya.sharma@fintechco.com,1234_engineering,General; Engineering
+FINEMP1094,aarav.kapoor@fintechco.com,1234_engineering,General; Engineering
+FINEMP1096,krishna.bhat@fintechco.com,1234_finance,General; Finance
+FINEMP1097,sakshi.kapoor@fintechco.com,1234_marketing,General; Marketing
+FINEMP1098,arjun.patel@fintechco.com,1234_finance,General; Finance
+FINEMP1099,shaurya.chowdhury@fintechco.com,1234_engineering,General; Engineering
+FINEMP1100,aarav.mehta@fintechco.com,1234_c-level,All

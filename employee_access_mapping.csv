@@ -1,0 +1,99 @@
+employee_id,employee_name,employee_email,department,job_title
+FINEMP1000,Aadhya Patel,aadhya.patel@fintechco.com,Sales,Sales Manager
+FINEMP1001,Isha Chowdhury,isha.chowdhury@fintechco.com,Finance,Credit Officer
+FINEMP1002,Sakshi Malhotra,sakshi.malhotra@fintechco.com,Sales,Relationship Manager
+FINEMP1003,Krishna Malhotra,krishna.malhotra@fintechco.com,Business,Business Analyst
+FINEMP1004,Aadhya Saxena,aadhya.saxena@fintechco.com,Marketing,Marketing Manager
+FINEMP1005,Shaurya Joshi,shaurya.joshi@fintechco.com,Finance,Financial Analyst
+FINEMP1006,Sara Sharma,sara.sharma@fintechco.com,Quality Assurance,QA Engineer
+FINEMP1007,Prisha Mehta,prisha.mehta@fintechco.com,Marketing,Marketing Manager
+FINEMP1008,Aadhya Chowdhury,aadhya.chowdhury@fintechco.com,Operations,Customer Support
+FINEMP1009,Sai Gupta,sai.gupta@fintechco.com,Finance,Credit Officer
+FINEMP1010,Vihaan Chowdhury,vihaan.chowdhury@fintechco.com,HR,HR Manager
+FINEMP1011,Sai Sharma,sai.sharma@fintechco.com,Business,Business Analyst
+FINEMP1012,Ishaan Patel,ishaan.patel@fintechco.com,Technology,Security Engineer; Blockchain Developer
+FINEMP1013,Prisha Banerjee,prisha.banerjee@fintechco.com,Technology,Security Engineer
+FINEMP1014,Isha Desai,isha.desai@fintechco.com,Finance,Treasury Analyst
+FINEMP1015,Ananya Singh,ananya.singh@fintechco.com,HR,HR Manager
+FINEMP1016,Ananya Reddy,ananya.reddy@fintechco.com,Sales,Relationship Manager
+FINEMP1017,Prisha Saxena,prisha.saxena@fintechco.com,Technology,DevOps Engineer
+FINEMP1018,Vivaan Reddy,vivaan.reddy@fintechco.com,Compliance,Compliance Officer
+FINEMP1019,Isha Chowdhury,isha.chowdhury@fintechco.com,Sales,Relationship Manager
+FINEMP1020,Krishna Verma,krishna.verma@fintechco.com,Sales,Sales Manager
+FINEMP1021,Vihaan Verma,vihaan.verma@fintechco.com,Finance,Treasury Analyst
+FINEMP1022,Sai Khan,sai.khan@fintechco.com,Operations,Customer Support
+FINEMP1023,Krishna Gupta,krishna.gupta@fintechco.com,Business,Business Analyst
+FINEMP1024,Reyansh Mehta,reyansh.mehta@fintechco.com,Technology,Security Engineer
+FINEMP1025,Krishna Reddy,krishna.reddy@fintechco.com,Marketing,Marketing Manager
+FINEMP1027,Myra Desai,myra.desai@fintechco.com,Technology,Security Engineer
+FINEMP1028,Isha Nair,isha.nair@fintechco.com,Compliance,Compliance Officer
+FINEMP1029,Aditya Patel,aditya.patel@fintechco.com,Data,Data Analyst
+FINEMP1030,Vihaan Reddy,vihaan.reddy@fintechco.com,Data; Quality Assurance,Data Scientist; QA Engineer
+FINEMP1031,Isha Desai,isha.desai@fintechco.com,Compliance,Compliance Officer
+FINEMP1032,Arjun Desai,arjun.desai@fintechco.com,Finance,Financial Analyst
+FINEMP1033,Saanvi Bhat,saanvi.bhat@fintechco.com,Risk,Risk Analyst
+FINEMP1034,Diya Desai,diya.desai@fintechco.com,Marketing,Marketing Manager
+FINEMP1035,Arjun Chopra,arjun.chopra@fintechco.com,Finance,Treasury Analyst
+FINEMP1036,Avni Khan,avni.khan@fintechco.com,Business,Business Analyst
+FINEMP1037,Vihaan Garg,vihaan.garg@fintechco.com,Sales,Sales Manager
+FINEMP1038,Diya Bhat,diya.bhat@fintechco.com,Technology,Security Engineer
+FINEMP1039,Sai Desai,sai.desai@fintechco.com,Technology,DevOps Engineer
+FINEMP1041,Shaurya Joshi,shaurya.joshi@fintechco.com,Sales,Relationship Manager
+FINEMP1042,Vihaan Desai,vihaan.desai@fintechco.com,Operations,Customer Support
+FINEMP1043,Aadhya Singh,aadhya.singh@fintechco.com,Sales,Sales Manager
+FINEMP1044,Isha Desai,isha.desai@fintechco.com,Technology,Software Engineer
+FINEMP1045,Ananya Banerjee,ananya.banerjee@fintechco.com,Data,Data Analyst
+FINEMP1046,Shaurya Joshi,shaurya.joshi@fintechco.com,Marketing,Marketing Manager
+FINEMP1047,Ishaan Singh,ishaan.singh@fintechco.com,Business,Business Analyst
+FINEMP1048,Isha Singh,isha.singh@fintechco.com,Finance,Financial Analyst
+FINEMP1049,Arjun Garg,arjun.garg@fintechco.com,Product,Product Manager
+FINEMP1050,Myra Gupta,myra.gupta@fintechco.com,Quality Assurance,QA Engineer
+FINEMP1051,Reyansh Saxena,reyansh.saxena@fintechco.com,Technology,Security Engineer
+FINEMP1052,Ishaan Singh,ishaan.singh@fintechco.com,Sales,Relationship Manager
+FINEMP1053,Isha Sharma,isha.sharma@fintechco.com,Operations,Customer Support
+FINEMP1054,Ishaan Singh,ishaan.singh@fintechco.com,Data,Data Scientist
+FINEMP1055,Aditya Saxena,aditya.saxena@fintechco.com,HR,HR Manager
+FINEMP1056,Saanvi Bhat,saanvi.bhat@fintechco.com,Design,UX Designer
+FINEMP1057,Aditya Kapoor,aditya.kapoor@fintechco.com,Marketing,Marketing Manager
+FINEMP1058,Avni Chopra,avni.chopra@fintechco.com,Finance,Financial Analyst
+FINEMP1059,Saanvi Malhotra,saanvi.malhotra@fintechco.com,Operations,Customer Support
+FINEMP1060,Arjun Mehta,arjun.mehta@fintechco.com,Sales,Sales Manager
+FINEMP1061,Vivaan Chowdhury,vivaan.chowdhury@fintechco.com,Technology,Blockchain Developer
+FINEMP1062,Ananya Iyer,ananya.iyer@fintechco.com,Product,Product Manager
+FINEMP1063,Aadhya Kapoor,aadhya.kapoor@fintechco.com,Risk,Risk Analyst
+FINEMP1064,Saanvi Nair,saanvi.nair@fintechco.com,Risk,Risk Analyst
+FINEMP1065,Myra Garg,myra.garg@fintechco.com,Technology,Blockchain Developer
+FINEMP1066,Diya Iyer,diya.iyer@fintechco.com,Sales,Sales Manager
+FINEMP1067,Shaurya Chopra,shaurya.chopra@fintechco.com,Compliance,Compliance Officer
+FINEMP1068,Shaurya Singh,shaurya.singh@fintechco.com,Data,Data Scientist
+FINEMP1069,Vivaan Saxena,vivaan.saxena@fintechco.com,Risk,Risk Analyst
+FINEMP1070,Saanvi Banerjee,saanvi.banerjee@fintechco.com,Finance,Credit Officer
+FINEMP1071,Vivaan Verma,vivaan.verma@fintechco.com,Finance,Credit Officer
+FINEMP1072,Saanvi Gupta,saanvi.gupta@fintechco.com,Quality Assurance,QA Engineer
+FINEMP1073,Diya Nair,diya.nair@fintechco.com,Sales,Relationship Manager
+FINEMP1074,Vihaan Chopra,vihaan.chopra@fintechco.com,Sales,Relationship Manager
+FINEMP1075,Ananya Khan,ananya.khan@fintechco.com,Quality Assurance,QA Engineer
+FINEMP1076,Avni Chowdhury,avni.chowdhury@fintechco.com,Finance,Credit Officer
+FINEMP1077,Krishna Nair,krishna.nair@fintechco.com,Design,UX Designer
+FINEMP1078,Prisha Chopra,prisha.chopra@fintechco.com,Data,Data Analyst
+FINEMP1079,Krishna Iyer,krishna.iyer@fintechco.com,Finance,Financial Analyst
+FINEMP1080,Avni Reddy,avni.reddy@fintechco.com,Data,Data Analyst
+FINEMP1081,Sakshi Malhotra,sakshi.malhotra@fintechco.com,Finance,Credit Officer
+FINEMP1082,Vihaan Chowdhury,vihaan.chowdhury@fintechco.com,Finance,Financial Analyst
+FINEMP1083,Krishna Malhotra,krishna.malhotra@fintechco.com,Sales,Sales Manager
+FINEMP1084,Saanvi Chowdhury,saanvi.chowdhury@fintechco.com,Business,Business Analyst
+FINEMP1085,Aadhya Mehta,aadhya.mehta@fintechco.com,Quality Assurance,QA Engineer
+FINEMP1086,Diya Iyer,diya.iyer@fintechco.com,Data,Data Analyst
+FINEMP1087,Avni Nair,avni.nair@fintechco.com,Sales,Relationship Manager
+FINEMP1088,Avni Chowdhury,avni.chowdhury@fintechco.com,Operations,Customer Support
+FINEMP1089,Aarav Joshi,aarav.joshi@fintechco.com,Technology,Security Engineer
+FINEMP1090,Arjun Chowdhury,arjun.chowdhury@fintechco.com,Technology,Software Engineer
+FINEMP1091,Diya Desai,diya.desai@fintechco.com,Compliance,Compliance Officer
+FINEMP1092,Ananya Nair,ananya.nair@fintechco.com,HR,HR Manager
+FINEMP1093,Shaurya Sharma,shaurya.sharma@fintechco.com,Product,Product Manager
+FINEMP1094,Aarav Kapoor,aarav.kapoor@fintechco.com,Design,UX Designer
+FINEMP1096,Krishna Bhat,krishna.bhat@fintechco.com,Finance,Credit Officer
+FINEMP1097,Sakshi Kapoor,sakshi.kapoor@fintechco.com,Marketing,Marketing Manager
+FINEMP1098,Arjun Patel,arjun.patel@fintechco.com,Risk,Risk Analyst
+FINEMP1099,Shaurya Chowdhury,shaurya.chowdhury@fintechco.com,Technology,DevOps Engineer
+FINEMP1100,Aarav Mehta,aarav.mehta@fintechco.com,C-Level,Chief Executive Officer

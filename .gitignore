@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+.env
+.env.*
+/secrets/
+/finsolve-rbac-rag-firebase-adminsdk-fbsvc-0aa30eeeff.json
+/serviceAccountKey.json
+/data/app.sqlite3
+/data/app.sqlite3-*
+/vector_db/chroma.sqlite3*
+/vector_db/*/
+/vector_service/data/

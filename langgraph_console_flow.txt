@@ -1,0 +1,350 @@
+FINSOLVE LANGGRAPH CONSOLE SKELETON
+Detailed implemented flow for review
+
+Purpose
+-------
+This document explains the current console prototype in
+langgraph_console_skeleton.py. It follows what the code currently does; it is
+not a description of future FastAPI, Streamlit, authentication, or memory
+features.
+
+
+1. What happens when the script starts
+--------------------------------------
+1. Run the script from the project folder:
+       python.exe .\langgraph_console_skeleton.py
+2. Python reaches the main guard at the bottom of the file and calls
+   run_console().
+3. The console prints that this is a development prototype and that the
+   selected profile is not authenticated identity.
+4. It asks for one profile:
+       Engineering, Finance, General, HR, Marketing, or All
+5. validate_profile() checks that the input exactly matches one of these
+   values. An invalid profile is rejected and the program asks again.
+6. The console asks for one question. Empty questions are rejected and it asks
+   again.
+7. create_llm() loads .env using python-dotenv and requires both:
+       GOOGLE_API_KEY
+       GEMINI_MODEL
+   If either is missing, the program prints a configuration error and stops.
+8. build_graph(llm) creates and compiles the LangGraph workflow.
+9. run_console() constructs the initial graph state and calls:
+       final_state = graph.invoke(initial_state)
+10. The graph first checks locally for a clear greeting or assistant
+    meta-question. Those requests skip classifier Gemini call and go directly
+    to the dynamic response node. Other requests continue to Gemini
+    classification.
+11. The graph processes the state through its nodes and routes.
+12. The console prints the final answer and, if present, its citations.
+13. The script ends. It does not keep a conversation loop or retain memory.
+
+
+2. Initial graph state
+----------------------
+Before invocation, run_console() creates one GraphState with these fields:
+
+- access_group: the profile selected in the console.
+- query: the non-empty question entered by the user.
+- category: initially empty; filled by the classifier.
+- classification_reason: initially empty; filled by the classifier.
+- documents: initially an empty list; filled by authorized retrieval.
+- answer: initially empty; filled by the final response node.
+- citations: initially an empty list; filled for a document answer.
+- status: initially "pending"; updated by the relevant node.
+
+The state is for one request only. It does not contain prior conversation
+messages, passwords, an API key, or a full employee profile.
+
+
+3. Graph structure
+------------------
+build_graph() creates a StateGraph using GraphState, registers the nodes, sets
+detect_simple_general_query as the entry point, adds conditional routing, and
+compiles the graph with workflow.compile().
+
+The compiled graph looks like this:
+
+    START
+      |
+      v
+    detect_simple_general_query
+      |
+      +-- clear greeting/meta-question --> general_assistant_response --> END
+      |
+      +-- other request --> classify_request
+                                |
+      +-- document_question --> retrieve_documents
+      |                           |
+      |                           +-- one or more results
+      |                           |       |
+      |                           |       v
+      |                           |   generate_grounded_answer --> END
+      |                           |
+      |                           +-- no results
+      |                                   |
+      |                                   v
+      |                              no_evidence_response --> END
+      |
+      +-- hr_csv_request --> hr_csv_not_connected_response --> END
+      |
+      +-- general_assistant --> general_assistant_response --> END
+      |
+      +-- out_of_scope --> out_of_scope_response --> END
+      |
+      +-- clarification_needed --> clarification_response --> END
+      |
+      +-- classification failure/unknown category
+              |
+              v
+         explicit_error_response --> END
+
+The graph compilation is in build_graph(), at:
+    return workflow.compile()
+
+The graph execution is in run_console(), at:
+    final_state = graph.invoke(initial_state)
+
+
+4. Node 1: detect_simple_general_query
+---------------------------------------
+This quick local check recognizes only clear standalone greetings and assistant
+identity/capability questions, such as "hello", "who are you?", or "what does
+this agent do?". It marks those requests as general_assistant so they go
+directly to the dynamic response node without spending time on a separate
+Gemini classification request. Other questions continue to the classifier.
+Ambiguous or FinSolve-topic questions are not treated as simple meta-questions.
+
+
+5. Node 2: classify_request
+---------------------------
+Purpose:
+- Decide what kind of request the user entered before any ChromaDB retrieval.
+
+What the node does:
+1. If the quick local check did not match, classify_request_node() reads
+   state["query"].
+2. classify_query() calls llm.with_structured_output(ClassificationResult).
+3. It sends Gemini a system message defining the FinSolve assistant and a user
+   message containing the category descriptions and the question.
+4. Gemini must return a Pydantic ClassificationResult with:
+       category
+       reason
+5. The category must be one of:
+       document_question
+       general_assistant
+       hr_csv_request
+       out_of_scope
+       clarification_needed
+6. The node stores category, reason, and a corresponding status in graph state.
+
+Important boundary:
+- The classifier runs before retrieval.
+- It does not receive a retrieval tool and does not set or expand permissions.
+- The question is treated as text to classify, not as a command to modify the
+  assistant's access rules.
+
+Classification outcomes:
+- document_question: proceed to authorized document retrieval.
+- general_assistant: generate a contextual conversational answer with Gemini,
+  using the simulated access profile and query; skip ChromaDB completely.
+- hr_csv_request: return the fixed not-connected message; do not read the CSV.
+- out_of_scope: return the fixed scope message for unrelated coding, math,
+  general knowledge, trivia, or other non-FinSolve requests; do not retrieve.
+- clarification_needed: return a clarification message; do not retrieve.
+- Model/schema exception: the node writes an error response and status. The
+  routing function then selects explicit_error_response.
+
+The conditional routing after classification is implemented by
+route_after_classification().
+
+
+6. Node 3: general_assistant_response
+--------------------------------------
+This node runs only when classification is general_assistant, for example for a
+greeting or a question about the assistant's identity or capabilities.
+
+1. It sends Gemini a module-level system persona describing the FinSolve
+   Internal Knowledge Assistant, its ChromaDB/RBAC document-search capability,
+   its single-turn console behavior, and its disconnected HR CSV limitation.
+2. It passes the selected simulated access profile and the user's message in a
+   separate human message.
+3. The selected model generates a natural, concise response (one or two short
+   sentences); it should answer only what was asked and avoid unrequested
+   capability lists. This node does not make a ChromaDB query.
+4. On success, the node stores the response, sets citations to an empty list,
+   and sets status to ok. A model failure is surfaced with error status.
+
+
+7. Node 4: retrieve_documents
+-----------------------------
+This node runs only when classification is document_question.
+
+What the node does:
+1. Gets the persistent Chroma document collection with
+   get_document_collection(), unless a test collection was injected.
+2. Creates the simulation-only SimulatedEmployeeRepository, unless a test
+   repository was injected.
+3. Constructs DocumentSearchService(collection, repository).
+4. Calls service.search() with:
+       employee_id = selected console profile
+       query = user's question
+       n_results = 5
+5. The retrieval service asks the repository for the selected profile's groups.
+6. The retrieval service validates those groups, adds General access for a
+   regular department if required, and creates the Chroma metadata filter.
+7. The returned DocumentResult entries contain chunk text and citation fields.
+8. The node stores results in state["documents"].
+
+Simulated profile mapping:
+- Engineering -> Engineering
+- Finance -> Finance
+- General -> General
+- HR -> HR
+- Marketing -> Marketing
+- All -> All
+
+The existing retrieval service expands regular departments to include General.
+It expands All to all canonical groups. The console profile is only for local
+testing; it is not proof of employee identity.
+
+Failure behavior:
+- If retrieval raises an error, the node records an explicit retrieval failure,
+  clears documents, and sets status to error.
+- It does not make an unfiltered Chroma query or call the answer model with
+  unauthorized context.
+
+After retrieval, route_after_retrieval() checks whether documents were returned:
+- Non-empty list -> generate_grounded_answer.
+- Empty list -> no_evidence_response.
+
+
+8. Node 5: generate_grounded_answer
+-----------------------------------
+This node runs only when authorized retrieval returned one or more results.
+
+Prompt preparation:
+1. build_grounded_prompt() formats each result with a numbered label, source,
+   document title, section path, and chunk content.
+2. It includes the user's question.
+3. It tells Gemini to answer only from the provided evidence, state when the
+   evidence is insufficient, avoid inventing facts, and refer to evidence
+   numbers such as [1].
+
+Answer generation:
+1. The node calls llm.invoke(prompt).
+2. It extracts the response content and stores the text in state["answer"].
+3. It builds citation entries from the actual DocumentResult metadata:
+       [1] Document title > section path (source file)
+4. It stores citations and sets status to ok.
+
+If answer generation fails:
+- The node stores an explicit answer-generation failure.
+- It clears citations and sets status to error.
+- It does not return a fabricated successful answer.
+
+The citations list is assembled from retrieved result metadata, not from
+source paths invented by the model.
+
+
+9. Fixed-response nodes
+-----------------------
+no_evidence_response:
+- Used when authorized search returns no chunks.
+- Returns a fixed message that the approved documents for this profile did not
+  provide enough information.
+- Returns no citations.
+
+hr_csv_not_connected_response:
+- Used for requests classified as needing the structured HR CSV.
+- Says that HR CSV access is not connected in this prototype.
+- Does not open, parse, search, or embed the CSV.
+- Returns no citations.
+
+out_of_scope_response:
+- Says the assistant is limited to approved FinSolve employee documents.
+- Returns no citations.
+
+clarification_response:
+- Asks the user to clarify the FinSolve document question or HR-data need.
+- Returns no citations.
+
+general_assistant_response:
+- Unlike the fixed-response nodes above, this is a dynamic Gemini response.
+- It handles greetings and assistant meta-questions without document retrieval.
+- It returns no citations.
+
+explicit_error_response:
+- Preserves the error message already stored in the state, or uses a generic
+  workflow error if no message was set.
+- Sets status to error and clears citations.
+
+
+10. Example paths
+----------------
+Example A: Engineering asks about an Engineering document
+1. User chooses Engineering and enters a question.
+2. Classifier returns document_question.
+3. The simulated repository returns Engineering.
+4. DocumentSearchService applies Engineering plus General filtering.
+5. Chroma returns up to five authorized chunks.
+6. Gemini answers from those chunks.
+7. The console prints the answer and references built from chunk metadata.
+
+Example B: User asks for an employee's salary
+1. Classifier returns hr_csv_request.
+2. The graph routes directly to hr_csv_not_connected_response.
+3. No document retrieval and no CSV read occurs.
+4. The console prints the not-connected response.
+
+Example C: Search finds no documents for the selected profile
+1. Classifier returns document_question.
+2. Retrieval returns an empty list.
+3. route_after_retrieval() routes to no_evidence_response.
+4. The console prints a fixed no-evidence response without citations.
+
+Example D: User asks an unrelated question
+1. Classifier returns out_of_scope.
+2. The graph routes directly to out_of_scope_response.
+3. ChromaDB is not queried.
+
+Example E: User asks "Who are you?"
+1. The local check recognizes this as an assistant identity question.
+2. The graph skips the classifier and routes to general_assistant_response.
+3. The selected model replies briefly using the persona prompt and simulated
+   profile, without listing unrelated capabilities or limitations.
+4. ChromaDB is not queried and the response has no citations.
+
+
+11. Current limits and future replacement points
+-----------------------------------------------
+- This is a console prototype, not a production chatbot.
+- The console role is simulated and must later be replaced by an authenticated
+  identity and trusted employee-profile repository.
+- One graph invocation handles one question; there is no checkpoint, memory,
+  or conversation history.
+- The HR CSV is intentionally not connected.
+- There is no FastAPI endpoint or Streamlit interface in this implementation.
+- Chroma retrieval goes through DocumentSearchService, which owns the
+  authorization filter. Do not replace it with an unfiltered collection query.
+- Gemini credentials and model name are loaded from local environment
+  variables; credentials should never be printed or committed.
+
+
+12. Main code locations
+-----------------------
+- Graph state and schemas: GraphState and ClassificationResult.
+- Model configuration: load_gemini_settings() and create_llm().
+- Fast local greeting/meta-question detection: is_simple_general_assistant_query().
+- First graph routing step: detect_simple_general_query_node() and
+  route_after_simple_general_query().
+- Classification prompt/schema call: classify_query().
+- General assistant persona: GENERAL_ASSISTANT_SYSTEM_PROMPT.
+- Dynamic conversational response: general_assistant_response_node().
+- Classification node: classify_request_node().
+- Classification routing: route_after_classification().
+- RBAC retrieval node: retrieve_documents_node().
+- Retrieval routing: route_after_retrieval().
+- Grounded prompt: build_grounded_prompt().
+- Grounded answer and citations: generate_grounded_answer_node().
+- Graph construction and compilation: build_graph().
+- User input and graph invocation: run_console().

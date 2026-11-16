@@ -1,0 +1,24 @@
+Q1: How many employees are based in Jaipur, and who are they?
+ACTUAL: 6 employees: Vihaan Garg (FINEMP1037), Vivaan Chowdhury (FINEMP1061), Aadhya Kapoor (FINEMP1063), Diya Iyer (FINEMP1066), Shaurya Singh (FINEMP1068), Arjun Patel (FINEMP1098).
+Q2: Who is the most recent joiner, and when did they join?
+ACTUAL: Krishna Verma (FINEMP1020), Sales Manager, joined on 29-11-2024.
+Q3: Who is the earliest joiner, and when did they join?
+ACTUAL: Aarav Mehta (FINEMP1100), Chief Executive Officer, joined on 15-01-2018.
+Q4: Who is the oldest employee, and what is their date of birth?
+ACTUAL: Sai Sharma (FINEMP1011), Business Analyst, born on 02-03-1975.
+Q5: Who is the youngest employee, and what is their date of birth?
+ACTUAL: Avni Nair (FINEMP1087), Relationship Manager, born on 05-08-1999.
+Q6: Which employee had the most recent performance review, and on what date?
+ACTUAL: Vihaan Desai (FINEMP1042), Customer Support, last review on 28-04-2025.
+Q7: How many employees joined in 2024?
+ACTUAL: 14 employees: FINEMP1018, FINEMP1020, FINEMP1023, FINEMP1012 (second record, Blockchain Developer), FINEMP1028, FINEMP1032, FINEMP1042, FINEMP1043, FINEMP1049, FINEMP1055, FINEMP1068, FINEMP1073, FINEMP1074, FINEMP1093.
+Q8: Which employees were born in 1999?
+ACTUAL: 2 employees: Krishna Reddy (FINEMP1025, born 08-06-1999) and Avni Nair (FINEMP1087, born 05-08-1999).
+Q9: How many employees work in the city of Mumbai?
+ACTUAL: 11 employees (the question uses "city", which should map to the location column). They are: Aadhya Chowdhury (FINEMP1008), Krishna Verma (1020), Shaurya Joshi (1041), Ananya Banerjee (1045), Vihaan Chopra (1074), Ananya Khan (1075, first record), Krishna Nair (1077), Sakshi Malhotra (1081), Shaurya Sharma (1093), Shaurya Chowdhury (1099), Aarav Mehta (1100).
+Q10: What is the home address of Aarav Mehta?
+ACTUAL: Not answerable. The data has no address column. The error should say the field 'home_address' (or 'address') is not supported.
+Q11: Who is the CEO, and what is their salary?
+ACTUAL: Aarav Mehta (FINEMP1100), salary 3,200,000. (Regression check: this worked before and must still work.)
+Q12: Which employee has the highest attendance percentage?
+ACTUAL: Vihaan Chowdhury (FINEMP1010), HR Manager, 99.98%. (Regression check: this worked before and must still work.)
