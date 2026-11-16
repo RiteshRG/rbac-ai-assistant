@@ -11,6 +11,8 @@ import jwt
 
 from vector_search_client import (
     DocumentResult,
+    RemoteDocumentSearchAdapter,
+    RemoteSearchConfig,
     VectorSearchError,
     create_document_search_service,
 )
@@ -97,6 +99,7 @@ class VectorSearchClientTests(unittest.TestCase):
                 "VECTOR_TOKEN_ISSUER": ISSUER,
                 "VECTOR_TOKEN_AUDIENCE": AUDIENCE,
                 "VECTOR_TOKEN_TTL_SECONDS": "90",
+                "CLOUD_RUN_IAM_AUTH": "false",
             },
         )
         self.environment.start()
@@ -167,6 +170,49 @@ class VectorSearchClientTests(unittest.TestCase):
         self.assertEqual(claims["access_groups"], ["Finance"])
         self.assertNotIn("access_groups", json.loads(requests[0].data))
         self.assertEqual(requests[0].full_url, "http://127.0.0.1:8001/internal/v1/search")
+
+    def test_cloud_run_identity_token_is_separate_from_signed_vector_token(self) -> None:
+        service = RemoteDocumentSearchAdapter(
+            employee_repository=FakeProfileRepository(["All"]),
+            config=RemoteSearchConfig(
+                service_url="http://127.0.0.1:8001",
+                timeout_seconds=2,
+                token_secret=SECRET,
+                token_issuer=ISSUER,
+                token_audience=AUDIENCE,
+                token_ttl_seconds=90,
+                cloud_run_iam_auth=True,
+            ),
+        )
+        requests = []
+
+        def fake_urlopen(request, timeout):
+            requests.append(request)
+            return FakeHTTPResponse(valid_payload())
+
+        with (
+            patch(
+                "vector_search_client.get_cloud_run_identity_token",
+                return_value="cloud-run-id-token",
+            ) as identity_token,
+            patch("vector_search_client.urlopen", side_effect=fake_urlopen),
+        ):
+            service.search("employee-1", "question")
+
+        identity_token.assert_called_once_with("http://127.0.0.1:8001")
+        self.assertEqual(
+            requests[0].get_header("X-serverless-authorization"),
+            "Bearer cloud-run-id-token",
+        )
+        vector_token = requests[0].get_header("Authorization").removeprefix("Bearer ")
+        claims = jwt.decode(
+            vector_token,
+            SECRET,
+            algorithms=["HS256"],
+            issuer=ISSUER,
+            audience=AUDIENCE,
+        )
+        self.assertEqual(claims["access_groups"], ["All"])
 
     def test_timeout_connection_and_http_errors_raise_without_retry(self) -> None:
         errors = [

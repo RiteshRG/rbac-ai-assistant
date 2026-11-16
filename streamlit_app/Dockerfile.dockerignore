@@ -1,0 +1,12 @@
+**
+!requirements.txt
+!streamlit_app/
+!streamlit_app/**
+!config/
+!config/__init__.py
+!config/api_limits.py
+!config/cloud_run_auth.py
+
+**/__pycache__/
+**/*.py[cod]
+streamlit_app/tests/

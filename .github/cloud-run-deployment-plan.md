@@ -1,7 +1,8 @@
 # FinSolve Cloud Run Deployment Plan
 
-**Status:** Draft for review. This is a deployment proposal, not an implementation.
-The current application is local/development-oriented and is not production-ready.
+**Status:** Deployment workflow and Cloud Run authentication support are being
+implemented. A successful cloud deployment still requires the one-time Google
+Cloud and GitHub setup below and a verified deployment.
 
 ## 1. Proposed topology
 
@@ -54,9 +55,8 @@ control, or Streamlit configuration.
   required Cloud Run identity token; setting a URL alone does not grant access.
 - Use a dedicated runtime service account for the Assistant API. Prefer
   Application Default Credentials and least-privilege Firestore access over a
-  downloaded service-account key. The current API configuration expects a
-  service-account file, so supporting attached Cloud Run identity is a
-  deployment prerequisite.
+  downloaded service-account key. The API now supports ADC; the Assistant
+  runtime identity still needs Firestore data access.
 - Preserve backend authorization: derive employee identity and groups from
   the authenticated profile, enforce HR permission at the CSV access boundary,
   and build vector filters server-side. The UI never calls Firestore, Chroma,
@@ -80,39 +80,54 @@ control, or Streamlit configuration.
   a separate persistence design before deployment; do not rely on an instance's
   local disk.
 
-## 5. Deployment sequence
+## 5. Main-branch automation
 
-1. **Production-readiness gate:** choose the unresolved options below; add
-   Cloud Run ID-token support to both service callers; support Firestore
-   Application Default Credentials; verify health/readiness and graceful
-   startup/shutdown behavior.
-2. **Prepare artifacts:** create separate, minimal container images for the
-   three services. Include only required code/data. Build and test the
-   versioned Chroma index; keep the HR CSV exclusively in the API image.
-3. **Configure Google Cloud:** select a project and region; enable required
-   Cloud Run, Artifact Registry, Firestore, and Secret Manager APIs; create
-   least-privilege runtime service accounts and service-to-service invoker
-   bindings.
-4. **Deploy in dependency order:** push images to Artifact Registry; deploy
-   the private Vector API; deploy the private Assistant API configured with
-   the vector URL; deploy Streamlit configured with the Assistant API URL.
-5. **Verify and promote:** test health/readiness, login, chat persistence,
-   document retrieval/citations, authorized and denied HR questions, and
-   private-service rejection from an unauthorized caller. Review logs for
-   accidental secrets or sensitive data before promoting the revision.
-6. **Operate and roll back:** use Cloud Run revisions for rollback; monitor
-   errors, latency, instance scaling, and provider limits. Keep image/index
-   versions identifiable and retain a known-good revision.
+The workflow at `workflows/deploy-cloud-run.yml` builds and deploys the three
+services on pushes to `main`. It builds the approved-document Chroma index into
+the Vector API image, retrieves the HR CSV from Secret Manager as a BuildKit
+secret, and injects API signing keys and the selected LLM key into Cloud Run
+from Secret Manager. The CSV is not included in the Docker build context.
+The Assistant API build is excluded from GitHub Actions layer caching so its
+CSV-bearing image layer is not duplicated into the Actions cache.
 
-## 6. Decisions for review
+Before the first push, configure project `finsolve-rbac-assistant` in organization
+`unigoa.ac.in`, region `asia-south1`:
 
-- **Service split:** three services as above (recommended); alternatively
-  combine Streamlit and Assistant API to reduce services.
-- **Chroma lifecycle:** static versioned index rebuilt and redeployed
-  (recommended); confirm whether live index updates are actually required.
-- **Exposure:** public UI with app login, private API and Vector API
-  (recommended); confirm whether employee access needs an additional network
-  restriction such as an identity-aware access layer.
-- **Credentials:** attached Cloud Run service accounts / ADC for Firestore
-  (recommended); confirm whether the current service-account-file setting can
-  be updated before deployment.
+1. Enable Cloud Run, Artifact Registry, Firestore, IAM Credentials, Security
+   Token Service, and Secret Manager APIs. Create a Docker Artifact Registry
+   repository (for example `finsolve`), and create Firestore in Native mode.
+2. Create dedicated deployer, Streamlit, Assistant API, and Vector API service
+   accounts. Grant the deployer Cloud Run Admin, Artifact Registry Writer,
+   Secret Manager access to the HR CSV secret, and Service Account User on the
+   three runtime identities. Grant the Assistant identity
+   `roles/datastore.user` and Secret Accessor on its signing/LLM secrets; grant
+   the Vector identity Secret Accessor on the vector signing secret.
+3. Create Workload Identity Federation pool/provider for
+   `https://token.actions.githubusercontent.com`. Map
+   `google.subject=assertion.sub`, `attribute.repository=assertion.repository`,
+   and `attribute.ref=assertion.ref`; restrict the provider to repository
+   `RiteshRG/rbac-ai-assistant` and ref `refs/heads/main`. Allow that repository
+   principal to impersonate only the deployer service account.
+4. Bind the Assistant runtime account as `roles/run.invoker` on `vector-api`,
+   and the Streamlit runtime account as `roles/run.invoker` on `assistant-api`.
+   The workflow maintains these bindings after deploying each revision.
+5. Add these GitHub repository **variables**: `GCP_PROJECT_ID`,
+   `GCP_REGION`, `ARTIFACT_REGISTRY_REPOSITORY`,
+   `GCP_WORKLOAD_IDENTITY_PROVIDER` (full resource name),
+   `GCP_DEPLOYER_SERVICE_ACCOUNT`, `STREAMLIT_RUNTIME_SERVICE_ACCOUNT`,
+   `ASSISTANT_RUNTIME_SERVICE_ACCOUNT`, `VECTOR_RUNTIME_SERVICE_ACCOUNT`,
+   `HR_DATA_CSV_SECRET`, `APP_TOKEN_SECRET`, `VECTOR_TOKEN_SECRET`,
+   `LLM_PROVIDER` (`groq` or `gemini`), `LLM_API_KEY_SECRET`, and `LLM_MODEL`.
+   These variables contain resource names/configuration, not secret values.
+6. Create the named Secret Manager secrets and grant the identities above
+   access. `HR_DATA_CSV_SECRET` contains the approved HR CSV; the other secrets
+   hold the app token key, vector token key, and selected provider API key.
+   Never add the CSV or secret values to GitHub variables, workflow files, or
+   the Docker build context.
+
+After setup, a push to `main` builds SHA-tagged images, deploys Vector API →
+Assistant API → Streamlit, and leaves each revision identifiable by commit SHA.
+Verify login, chat persistence, document retrieval/citations, authorized and
+denied HR questions, and rejection of unauthenticated API/Vector requests.
+Cloud Run's local Chroma copy is rebuilt from the approved Markdown on each
+image build; it is not a shared, live-updatable index.

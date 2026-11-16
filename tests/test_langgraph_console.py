@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 from langgraph_console_skeleton import (
     ClassificationResult,
+    GroundedAnswerAssessment,
     GraphState,
     LLM_REQUEST_TIMEOUT_SECONDS,
     SimulatedEmployeeRepository,
@@ -36,16 +37,21 @@ class FakeModel:
         csv_plan: dict | None = None,
         requested_access_groups: list[str] | None = None,
         condensed_response: object = "What is the policy in Pune?",
+        grounded_assessment: GroundedAnswerAssessment | None = None,
+        answer_text: str = "This is the answer from the retrieved evidence. [1]",
     ) -> None:
         self.category = category
         self.requested_access_groups = requested_access_groups or []
         self.condensed_response = condensed_response
+        self.grounded_assessment = grounded_assessment
+        self.answer_text = answer_text
         self.csv_plan = csv_plan or {
             "operation": "count",
             "filters": [],
             "requested_fields": [],
         }
         self.prompts = []
+        self.grounded_prompts = []
 
     def with_structured_output(self, model_type):
         return self
@@ -65,11 +71,72 @@ class FakeModel:
             )
         if "Allowed operation names:" in text:
             return self.csv_plan
+        if self.grounded_assessment is not None and "Evidence:\n" in text:
+            self.grounded_prompts.append(text)
+            return self.grounded_assessment
 
-        class Response:
-            content = "This is the answer from the retrieved evidence. [1]"
+        return type("Response", (), {"content": self.answer_text})()
 
-        return Response()
+
+class MarketingClassificationFakeModel(FakeModel):
+    """Classify the two regression queries from the Marketing prompt guidance."""
+
+    def invoke(self, prompt):
+        text = str(prompt)
+        if "Classify this request" not in text:
+            return super().invoke(prompt)
+
+        self.prompts.append(prompt)
+        marketing_guidance = (
+            "Marketing quarterly reports cover acquisition, revenue, spend, ROI, "
+            "and customer retention targets or results."
+        )
+        marketing_queries = (
+            "What were the Q4 acquisition, revenue, spend, and ROI targets?",
+            "Customer Retention in Q4",
+        )
+        prompt_content = (
+            prompt[-1].content if isinstance(prompt, list) else text
+        )
+        question = prompt_content.rsplit("Question: ", 1)[-1].strip()
+        is_marketing_query = (
+            marketing_guidance in text and question in marketing_queries
+        )
+        category = "document_question" if is_marketing_query else "out_of_scope"
+        return ClassificationResult(
+            category=category,
+            reason=f"Fake classification: {category}.",
+            requested_access_groups=["Marketing"] if is_marketing_query else [],
+        )
+
+
+class HRCsvClassificationFakeModel(FakeModel):
+    """Classify structured employee-record questions from the HR prompt guidance."""
+
+    def invoke(self, prompt):
+        text = str(prompt)
+        if "Classify this request" not in text:
+            return super().invoke(prompt)
+
+        self.prompts.append(prompt)
+        prompt_content = prompt[-1].content if isinstance(prompt, list) else text
+        question = prompt_content.rsplit("Question: ", 1)[-1].strip()
+        hr_guidance = (
+            "any request that needs structured employee data from the HR CSV, "
+            "including employee lookups, filters, counts/aggregates, groupings, "
+            "and lists of one or more employees"
+        )
+        hr_queries = (
+            "How many employees are based in Jaipur, and who are they?",
+            "What is the home address of Aarav Mehta?",
+        )
+        is_hr_query = hr_guidance in text and question in hr_queries
+        category = "hr_csv_request" if is_hr_query else "out_of_scope"
+        return ClassificationResult(
+            category=category,
+            reason=f"Fake classification: {category}.",
+            requested_access_groups=[],
+        )
 
 
 class FakeEmployeeRepository:
@@ -89,17 +156,82 @@ class FakeEmployeeRepository:
         )
 
 
+class FakeMarketingEmployeeRepository(FakeEmployeeRepository):
+    def get_access_groups(self, employee_id: str):
+        return ["Marketing"]
+
+
+class FakeAllEmployeeRepository(FakeEmployeeRepository):
+    def get_authorization_context(self, employee_id: str):
+        if employee_id != "employee-all":
+            return None
+        return EmployeeAuthorizationContext(
+            employee_id=employee_id,
+            access_groups=("All",),
+            hr_csv_access=True,
+            source="firestore",
+        )
+
+
 class SpyCsvService:
-    def __init__(self) -> None:
+    def __init__(self, result: dict | None = None) -> None:
         self.calls = []
+        self.result = result or {"kind": "count", "count": 12, "records": []}
 
     def execute(self, plan, authorization_context):
         self.calls.append((plan, authorization_context))
-        return {"kind": "count", "count": 12, "records": []}
+        return self.result
 
 
 class FakeDocumentCollection:
     """Simple collection stub used by the retrieval node in the test."""
+
+    def __init__(self, access_group: str = "Engineering") -> None:
+        self.query_calls = 0
+        self.query_texts = []
+        self.query_wheres = []
+        self.access_group = access_group
+
+    def query(self, query_texts, n_results, where, include):
+        self.query_calls += 1
+        self.query_texts.extend(query_texts)
+        self.query_wheres.append(where)
+        if self.access_group not in where["access_group"]["$in"]:
+            return {
+                "documents": [[]],
+                "metadatas": [[]],
+                "distances": [[]],
+            }
+        is_general = self.access_group == "General"
+        return {
+            "documents": [[
+                "Payroll is processed on the last working day of each month."
+                if is_general
+                else "Sample evidence from Engineering."
+            ]],
+            "metadatas": [[
+                {
+                    "access_group": self.access_group,
+                    "source_file": (
+                        "general/employee_handbook.md"
+                        if is_general
+                        else "engineering/guide.md"
+                    ),
+                    "document_title": (
+                        "Employee Handbook" if is_general else "Engineering Guide"
+                    ),
+                    "section_path": (
+                        "Compensation & Payroll" if is_general else "Intro"
+                    ),
+                    "chunk_index": 0,
+                }
+            ]],
+            "distances": [[0.05]],
+        }
+
+
+class FakeMarketingDocumentCollection:
+    """Return approved Q4 Marketing evidence when the profile filter allows it."""
 
     def __init__(self) -> None:
         self.query_calls = 0
@@ -110,16 +242,41 @@ class FakeDocumentCollection:
         self.query_calls += 1
         self.query_texts.extend(query_texts)
         self.query_wheres.append(where)
+        if "Marketing" not in where["access_group"]["$in"]:
+            return {"documents": [[]], "metadatas": [[]], "distances": [[]]}
+
+        if "retention" in query_texts[0].casefold():
+            records = [
+                (
+                    "Customer Retention",
+                    "The loyalty program enrolled 50,000 customers, with 60% redeeming rewards by quarter-end. Retention-focused email campaigns achieved a 35% open rate and 5% conversion rate.",
+                ),
+                (
+                    "Q4 Strategic Objectives",
+                    "Personalized targeted offers and predictive analytics reduced customer churn by 8% compared to Q3.",
+                ),
+            ]
+        else:
+            records = [
+                (
+                    "Q4 - Projections & Targets",
+                    "Customer Acquisition Target: 220,000 new customers. Revenue Target: $11 million. Marketing Spend: $2.5 million. ROI Target: 4.4x.",
+                )
+            ]
+
         return {
-            "documents": [["Sample evidence from Engineering."]],
-            "metadatas": [[{
-                "access_group": "Engineering",
-                "source_file": "engineering/guide.md",
-                "document_title": "Engineering Guide",
-                "section_path": "Intro",
-                "chunk_index": 0,
-            }]],
-            "distances": [[0.05]],
+            "documents": [[text for _, text in records]],
+            "metadatas": [[
+                {
+                    "access_group": "Marketing",
+                    "source_file": "marketing/market_report_q4_2024.md",
+                    "document_title": "Comprehensive Marketing Report - Q4 2024",
+                    "section_path": section,
+                    "chunk_index": index,
+                }
+                for index, (section, _) in enumerate(records)
+            ]],
+            "distances": [[0.05 for _ in records]],
         }
 
 
@@ -205,18 +362,19 @@ class LangGraphConsoleTests(unittest.TestCase):
         self.assertEqual(result["category"], "document_question")
         self.assertTrue(result["classification_reason"])
 
-    def test_document_requests_for_other_departments_are_denied_by_profile_group(self):
-        class ProfileRepository:
-            def get_access_groups(self, employee_id):
-                return [employee_id]
+    def test_handbook_payroll_question_uses_profile_filtered_document_search(self):
+        model = FakeModel(requested_access_groups=["HR"])
+        collection = FakeDocumentCollection(access_group="General")
+        graph = build_graph(
+            model,
+            collection=collection,
+            employee_repository=FakeEmployeeRepository(),
+        )
 
-        for employee_group, requested_group in (
-            ("Engineering", "Finance"),
-            ("Finance", "Marketing"),
-        ):
-            state: GraphState = {
-                "employee_id": employee_group,
-                "query": "Tell me about a department-specific topic.",
+        result = graph.invoke(
+            {
+                "employee_id": "employee-general",
+                "query": "Tell me about Compensation & Payroll.",
                 "category": "",
                 "classification_reason": "",
                 "documents": [],
@@ -225,39 +383,16 @@ class LangGraphConsoleTests(unittest.TestCase):
                 "status": "pending",
                 "authorization_context": None,
             }
-
-            result = classify_request_node(
-                state,
-                FakeModel(requested_access_groups=[requested_group]),
-                ProfileRepository(),
-            )
-
-            self.assertEqual(result["status"], "denied")
-            self.assertIn(requested_group, result["answer"])
-            self.assertEqual(result["citations"], [])
-            self.assertEqual(route_after_classification(result), "end")
-
-    def test_all_profile_can_request_any_department_document_group(self):
-        state: GraphState = {
-            "employee_id": "All",
-            "query": "Tell me about a department-specific topic.",
-            "category": "",
-            "classification_reason": "",
-            "documents": [],
-            "answer": "",
-            "citations": [],
-            "status": "pending",
-            "authorization_context": None,
-        }
-
-        result = classify_request_node(
-            state,
-            FakeModel(requested_access_groups=["Finance"]),
-            SimulatedEmployeeRepository(),
         )
 
         self.assertEqual(result["status"], "ok")
         self.assertEqual(result["category"], "document_question")
+        self.assertEqual(collection.query_calls, 1)
+        self.assertEqual(
+            collection.query_wheres[0],
+            {"access_group": {"$in": ["General"]}},
+        )
+        self.assertIn("Employee Handbook", result["citations"][0])
 
     def test_classifier_separates_mixed_csv_and_document_requests(self):
         model = FakeModel()
@@ -271,6 +406,222 @@ class LangGraphConsoleTests(unittest.TestCase):
             "If one request requires both HR CSV data and approved-document evidence",
             str(model.prompts[0]),
         )
+
+    def test_classifier_prompt_routes_aggregate_and_employee_record_requests_to_hr_csv(self):
+        model = FakeModel(category="hr_csv_request")
+        questions = (
+            "How many employees are based in Jaipur, and who are they?",
+            "What is the home address of Aarav Mehta?",
+        )
+
+        for question in questions:
+            classify_query(model, question)
+
+        prompt_text = str(model.prompts[0])
+        self.assertIn("employee lookups, filters, counts/aggregates", prompt_text)
+        self.assertIn("lists of one or more employees", prompt_text)
+        self.assertIn("if a requested field is unsupported", prompt_text)
+        self.assertIn("do not classify these structured-data questions as out_of_scope", prompt_text)
+
+    def test_jaipur_employee_query_uses_the_authorized_hr_csv_workflow(self):
+        query = "How many employees are based in Jaipur, and who are they?"
+        plan = {
+            "operation": "filter",
+            "filters": [
+                {"field": "location", "operator": "equals", "value": "Jaipur"}
+            ],
+            "requested_fields": ["employee_id", "full_name", "location"],
+        }
+        operation_result = {
+            "kind": "records",
+            "count": 2,
+            "records": [
+                {
+                    "employee_id": "TEST001",
+                    "full_name": "Synthetic Person One",
+                    "location": "Jaipur",
+                },
+                {
+                    "employee_id": "TEST002",
+                    "full_name": "Synthetic Person Two",
+                    "location": "Jaipur",
+                },
+            ],
+            "truncated": False,
+        }
+        model = HRCsvClassificationFakeModel(
+            csv_plan=plan,
+            answer_text="Two employees are based in Jaipur: Synthetic Person One and Synthetic Person Two.",
+        )
+        service = SpyCsvService(result=operation_result)
+        collection = FakeDocumentCollection()
+        graph = build_graph(
+            model,
+            collection=collection,
+            employee_repository=FakeAllEmployeeRepository(),
+            csv_service=service,
+        )
+
+        result = graph.invoke(
+            {
+                "employee_id": "employee-all",
+                "query": query,
+                "category": "",
+                "classification_reason": "",
+                "documents": [],
+                "answer": "",
+                "citations": [],
+                "status": "pending",
+                "authorization_context": None,
+            }
+        )
+
+        self.assertEqual(result["status"], "ok")
+        self.assertEqual(result["category"], "hr_csv_request")
+        self.assertIn("Two employees are based in Jaipur", result["answer"])
+        self.assertEqual(collection.query_calls, 0)
+        self.assertEqual(len(service.calls), 1)
+        self.assertEqual(service.calls[0][0].filters[0].field, "location")
+        self.assertEqual(service.calls[0][0].filters[0].value, "Jaipur")
+        self.assertEqual(service.calls[0][1].access_groups, ("All",))
+
+    def test_home_address_request_reaches_hr_field_validation_and_is_not_read(self):
+        model = HRCsvClassificationFakeModel(
+            csv_plan={
+                "operation": "filter",
+                "filters": [],
+                "requested_fields": ["home_address"],
+            }
+        )
+        service = SpyCsvService()
+        graph = build_graph(
+            model,
+            collection=FakeDocumentCollection(),
+            employee_repository=FakeAllEmployeeRepository(),
+            csv_service=service,
+        )
+
+        result = graph.invoke(
+            {
+                "employee_id": "employee-all",
+                "query": "What is the home address of Aarav Mehta?",
+                "category": "",
+                "classification_reason": "",
+                "documents": [],
+                "answer": "",
+                "citations": [],
+                "status": "pending",
+                "authorization_context": None,
+            }
+        )
+
+        self.assertEqual(result["category"], "hr_csv_request")
+        self.assertEqual(result["status"], "error")
+        self.assertIn("Field 'home_address' not supported", result["answer"])
+        self.assertEqual(service.calls, [])
+
+    def test_classifier_prompt_covers_marketing_report_questions_and_fragments(self):
+        model = FakeModel(
+            category="document_question",
+            requested_access_groups=["Marketing"],
+        )
+        questions = (
+            "What were the Q4 acquisition, revenue, spend, and ROI targets?",
+            "Customer Retention in Q4",
+        )
+
+        for question in questions:
+            classify_query(model, question)
+
+        prompt_text = str(model.prompts[0])
+        self.assertIn("Marketing quarterly reports", prompt_text)
+        self.assertIn("acquisition, revenue, spend, ROI, and customer retention", prompt_text)
+        self.assertIn("Short topic phrases", prompt_text)
+        self.assertIn("This identifies topic only, not permission.", prompt_text)
+
+    def test_marketing_q4_targets_retrieve_and_generate_grounded_answer(self):
+        query = "What were the Q4 acquisition, revenue, spend, and ROI targets?"
+        evidence = [(
+            "Customer Acquisition Target: 220,000 new customers. Revenue Target: "
+            "$11 million. Marketing Spend: $2.5 million. ROI Target: 4.4x."
+        )]
+        answer = (
+            "The Q4 targets were 220,000 new customers, $11 million in revenue, "
+            "$2.5 million in marketing spend, and a 4.4x ROI."
+        )
+        self._assert_marketing_question_uses_evidence(query, evidence, answer, [1])
+
+    def test_marketing_customer_retention_fragment_retrieves_and_generates_answer(self):
+        query = "Customer Retention in Q4"
+        evidence = [
+            "The loyalty program enrolled 50,000 customers, with 60% redeeming "
+            "rewards by quarter-end. Retention-focused email campaigns achieved "
+            "a 35% open rate and 5% conversion rate.",
+            "Personalized targeted offers and predictive analytics reduced "
+            "customer churn by 8% compared to Q3.",
+        ]
+        answer = (
+            "In Q4, the loyalty program enrolled 50,000 customers, 60% redeemed "
+            "rewards, retention emails achieved a 35% open rate and 5% conversion "
+            "rate, and targeted offers reduced churn by 8% compared to Q3."
+        )
+        self._assert_marketing_question_uses_evidence(query, evidence, answer, [1, 2])
+
+    def _assert_marketing_question_uses_evidence(
+        self,
+        query: str,
+        evidence_chunks: list[str],
+        answer: str,
+        used_chunks: list[int],
+    ) -> None:
+        model = MarketingClassificationFakeModel(
+            grounded_assessment=GroundedAnswerAssessment(
+                answer=answer,
+                sufficient=True,
+                missing_info="",
+                used_chunks=used_chunks,
+            ),
+        )
+        collection = FakeMarketingDocumentCollection()
+        graph = build_graph(
+            model,
+            collection=collection,
+            employee_repository=FakeMarketingEmployeeRepository(),
+        )
+
+        result = graph.invoke(
+            {
+                "employee_id": "employee-marketing",
+                "query": query,
+                "category": "",
+                "classification_reason": "",
+                "documents": [],
+                "answer": "",
+                "citations": [],
+                "status": "pending",
+                "authorization_context": None,
+            }
+        )
+
+        self.assertEqual(result["status"], "ok")
+        self.assertEqual(result["category"], "document_question")
+        self.assertEqual(result["answer"], answer)
+        self.assertEqual(len(result["citations"]), len(used_chunks))
+        self.assertTrue(
+            all(
+                "marketing/market_report_q4_2024.md" in citation
+                for citation in result["citations"]
+            )
+        )
+        self.assertEqual(collection.query_calls, 1)
+        self.assertEqual(collection.query_texts, [query])
+        self.assertEqual(
+            set(collection.query_wheres[0]["access_group"]["$in"]),
+            {"Marketing", "General"},
+        )
+        for evidence_chunk in evidence_chunks:
+            self.assertIn(evidence_chunk, model.grounded_prompts[0])
+        self.assertIn(query, model.grounded_prompts[0])
 
     def test_no_evidence_response_node(self):
         state: GraphState = {
@@ -524,7 +875,7 @@ class LangGraphConsoleTests(unittest.TestCase):
         self.assertEqual(len(model.prompts), 1)
 
     def test_out_of_scope_graph_path_remains_separate_from_general_assistant(self):
-        model = FakeModel(category="out_of_scope")
+        model = MarketingClassificationFakeModel()
         collection = FakeDocumentCollection()
         graph = build_graph(
             model,

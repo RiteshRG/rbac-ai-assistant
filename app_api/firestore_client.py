@@ -13,14 +13,17 @@ _APP_NAME = "finsolve-app-api"
 def create_firestore_client(settings: AppSettings) -> firestore.Client:
     settings.validate()
     credential_path = settings.firebase_service_account_path
-    if not credential_path.is_file():
-        raise RuntimeError("The configured Firebase service-account file is unavailable.")
+    credential = None
+    if not settings.firebase_use_application_default_credentials:
+        if not credential_path.is_file():
+            raise RuntimeError("The configured Firebase service-account file is unavailable.")
+        credential = credentials.Certificate(str(credential_path))
 
     try:
         app = firebase_admin.get_app(_APP_NAME)
     except ValueError:
         app = firebase_admin.initialize_app(
-            credentials.Certificate(str(credential_path)),
+            credential,
             {"projectId": settings.firebase_project_id},
             name=_APP_NAME,
         )

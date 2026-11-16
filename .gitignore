@@ -7,6 +7,7 @@ __pycache__/
 /serviceAccountKey.json
 /data/app.sqlite3
 /data/app.sqlite3-*
+/DS-RPC-01/data/hr/hr_data.csv
 /vector_db/chroma.sqlite3*
 /vector_db/*/
 /vector_service/data/

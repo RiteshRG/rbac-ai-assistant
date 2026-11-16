@@ -31,6 +31,7 @@ class AppSettings:
     app_token_audience: str
     app_token_ttl_seconds: int = APP_TOKEN_TTL_SECONDS
     firestore_timeout_seconds: float = FIRESTORE_TIMEOUT_SECONDS
+    firebase_use_application_default_credentials: bool = False
 
     @classmethod
     def from_environment(cls) -> AppSettings:
@@ -47,9 +48,19 @@ class AppSettings:
         except ValueError as exc:
             raise SettingsError("App token lifetime or Firestore timeout is invalid.") from exc
 
+        adc_setting = os.getenv(
+            "FIREBASE_USE_APPLICATION_DEFAULT_CREDENTIALS", "false"
+        ).strip().casefold()
+        if adc_setting not in {"true", "false"}:
+            raise SettingsError(
+                "FIREBASE_USE_APPLICATION_DEFAULT_CREDENTIALS must be true or false."
+            )
+
         service_account = os.getenv("FIREBASE_SERVICE_ACCOUNT_PATH", "").strip()
-        service_account_path = Path(service_account).expanduser()
-        if service_account_path and not service_account_path.is_absolute():
+        service_account_path = (
+            Path(service_account).expanduser() if service_account else Path(".")
+        )
+        if service_account and not service_account_path.is_absolute():
             service_account_path = PROJECT_ROOT / service_account_path
 
         settings = cls(
@@ -65,17 +76,25 @@ class AppSettings:
             ),
             app_token_ttl_seconds=ttl,
             firestore_timeout_seconds=firestore_timeout,
+            firebase_use_application_default_credentials=adc_setting == "true",
         )
         settings.validate()
         return settings
 
     def validate(self) -> None:
+        credential_path_configured = str(self.firebase_service_account_path) != "."
+        if self.firebase_use_application_default_credentials and credential_path_configured:
+            raise SettingsError(
+                "FIREBASE_SERVICE_ACCOUNT_PATH must be empty when Application Default Credentials are enabled."
+            )
+        if not self.firebase_use_application_default_credentials and not credential_path_configured:
+            raise SettingsError(
+                "Set FIREBASE_SERVICE_ACCOUNT_PATH or enable "
+                "FIREBASE_USE_APPLICATION_DEFAULT_CREDENTIALS."
+            )
+
         required = (
             ("FIREBASE_PROJECT_ID", self.firebase_project_id),
-            (
-                "FIREBASE_SERVICE_ACCOUNT_PATH",
-                "" if str(self.firebase_service_account_path) == "." else str(self.firebase_service_account_path),
-            ),
             ("APP_TOKEN_ISSUER", self.app_token_issuer),
             ("APP_TOKEN_AUDIENCE", self.app_token_audience),
         )

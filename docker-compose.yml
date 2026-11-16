@@ -1,0 +1,103 @@
+services:
+  streamlit:
+    build:
+      context: .
+      dockerfile: streamlit_app/Dockerfile
+    environment:
+      ASSISTANT_API_MODE: real
+      ASSISTANT_API_URL: http://assistant-api:8000
+      ASSISTANT_API_TIMEOUT_SECONDS: "${ASSISTANT_API_TIMEOUT_SECONDS:-20}"
+    ports:
+      - "8501:8501"
+    depends_on:
+      assistant-api:
+        condition: service_healthy
+    networks:
+      - finsolve
+    restart: unless-stopped
+
+  assistant-api:
+    build:
+      context: .
+      dockerfile: app_api/Dockerfile
+      secrets:
+        - source: hr_data_csv
+          target: hr_data_csv
+    environment:
+      FIREBASE_PROJECT_ID: "${FIREBASE_PROJECT_ID:?Set FIREBASE_PROJECT_ID in .env}"
+      FIREBASE_SERVICE_ACCOUNT_PATH: /run/secrets/firebase-service-account.json
+      FIREBASE_USE_APPLICATION_DEFAULT_CREDENTIALS: "false"
+      APP_TOKEN_SECRET: "${APP_TOKEN_SECRET:?Set APP_TOKEN_SECRET in .env}"
+      APP_TOKEN_ISSUER: "${APP_TOKEN_ISSUER:-finsolve-app-api}"
+      APP_TOKEN_AUDIENCE: "${APP_TOKEN_AUDIENCE:-finsolve-streamlit-app}"
+      CLOUD_RUN_IAM_AUTH: "false"
+      APP_TOKEN_TTL_SECONDS: "${APP_TOKEN_TTL_SECONDS:-900}"
+      FIRESTORE_TIMEOUT_SECONDS: "${FIRESTORE_TIMEOUT_SECONDS:-10}"
+      LLM_PROVIDER: "${LLM_PROVIDER:-groq}"
+      GROQ_API_KEY: "${GROQ_API_KEY:-}"
+      GROQ_MODEL: "${GROQ_MODEL:-}"
+      GOOGLE_API_KEY: "${GOOGLE_API_KEY:-}"
+      GEMINI_MODEL: "${GEMINI_MODEL:-}"
+      VECTOR_SEARCH_MODE: remote
+      VECTOR_SERVICE_URL: http://vector-api:8000
+      VECTOR_SEARCH_TIMEOUT_SECONDS: "${VECTOR_SEARCH_TIMEOUT_SECONDS:-5}"
+      VECTOR_TOKEN_SECRET: "${VECTOR_TOKEN_SECRET:?Set VECTOR_TOKEN_SECRET in .env}"
+      VECTOR_TOKEN_ISSUER: "${VECTOR_TOKEN_ISSUER:?Set VECTOR_TOKEN_ISSUER in .env}"
+      VECTOR_TOKEN_AUDIENCE: "${VECTOR_TOKEN_AUDIENCE:?Set VECTOR_TOKEN_AUDIENCE in .env}"
+      VECTOR_TOKEN_TTL_SECONDS: "${VECTOR_TOKEN_TTL_SECONDS:-90}"
+    volumes:
+      - type: bind
+        source: "${FIREBASE_SERVICE_ACCOUNT_HOST_PATH:?Set FIREBASE_SERVICE_ACCOUNT_HOST_PATH in .env}"
+        target: /run/secrets/firebase-service-account.json
+        read_only: true
+    expose:
+      - "8000"
+    depends_on:
+      vector-api:
+        condition: service_healthy
+    networks:
+      - finsolve
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=3).read()"
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    restart: unless-stopped
+
+  vector-api:
+    build:
+      context: .
+      dockerfile: vector_service/Dockerfile
+    environment:
+      CHROMA_PERSIST_DIRECTORY: /app/vector_db
+      VECTOR_TOKEN_SECRET: "${VECTOR_TOKEN_SECRET:?Set VECTOR_TOKEN_SECRET in .env}"
+      VECTOR_TOKEN_ISSUER: "${VECTOR_TOKEN_ISSUER:?Set VECTOR_TOKEN_ISSUER in .env}"
+      VECTOR_TOKEN_AUDIENCE: "${VECTOR_TOKEN_AUDIENCE:?Set VECTOR_TOKEN_AUDIENCE in .env}"
+    expose:
+      - "8000"
+    networks:
+      - finsolve
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=3).read()"
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    restart: unless-stopped
+
+networks:
+  finsolve:
+    driver: bridge
+
+secrets:
+  hr_data_csv:
+    file: "${HR_DATA_CSV_HOST_PATH:?Set HR_DATA_CSV_HOST_PATH in .env}"

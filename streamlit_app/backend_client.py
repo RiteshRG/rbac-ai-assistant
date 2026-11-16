@@ -11,6 +11,11 @@ from uuid import uuid4
 import httpx
 
 from config.api_limits import ASSISTANT_API_TIMEOUT_SECONDS
+from config.cloud_run_auth import (
+    CloudRunIdentityError,
+    cloud_run_iam_auth_enabled,
+    get_cloud_run_identity_token,
+)
 
 
 class BackendError(RuntimeError):
@@ -49,7 +54,12 @@ class BackendClient(Protocol):
 class HttpBackendClient:
     is_mock = False
 
-    def __init__(self, base_url: str, timeout_seconds: float) -> None:
+    def __init__(
+        self,
+        base_url: str,
+        timeout_seconds: float,
+        cloud_run_iam_auth: bool = False,
+    ) -> None:
         parsed = urlsplit(base_url)
         if (
             parsed.scheme not in {"http", "https"}
@@ -62,6 +72,7 @@ class HttpBackendClient:
             raise ValueError("ASSISTANT_API_URL must be an HTTP(S) base URL.")
         self._base_url = base_url.rstrip("/")
         self._timeout_seconds = timeout_seconds
+        self._cloud_run_iam_auth = cloud_run_iam_auth
 
     def login(self, employee_id: str, password: str) -> dict[str, Any]:
         return self._request(
@@ -110,6 +121,14 @@ class HttpBackendClient:
         is_login: bool = False,
     ) -> Any:
         headers = {"Accept": "application/json"}
+        if self._cloud_run_iam_auth:
+            try:
+                identity_token = get_cloud_run_identity_token(self._base_url)
+            except CloudRunIdentityError as exc:
+                raise BackendError(
+                    "Could not authenticate to the assistant service."
+                ) from exc
+            headers["X-Serverless-Authorization"] = f"Bearer {identity_token}"
         if token:
             headers["Authorization"] = f"Bearer {token}"
         try:
@@ -276,4 +295,8 @@ def create_backend_client(
         raise ValueError("ASSISTANT_API_TIMEOUT_SECONDS must be a positive number.") from exc
     if timeout <= 0:
         raise ValueError("ASSISTANT_API_TIMEOUT_SECONDS must be a positive number.")
-    return HttpBackendClient(configured_url, timeout)
+    return HttpBackendClient(
+        configured_url,
+        timeout,
+        cloud_run_iam_auth=cloud_run_iam_auth_enabled(),
+    )

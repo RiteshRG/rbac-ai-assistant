@@ -1,0 +1,112 @@
+# Department retrieval checks; expected answers are approximate, not exact-match criteria.
+# Sources are approved Markdown documents only. No HR CSV questions are included.
+
+## Engineering
+
+Q1 [Engineering]: What technologies make up the data layer, and what is each used for?
+EXPECTED (approx): PostgreSQL handles transactional data; MongoDB stores user profiles and metadata; Redis supports caching, sessions, and pub/sub; Amazon S3 stores documents and backups.
+SOURCE: DS-RPC-01/data/engineering/engineering_master_doc.md
+
+Q2 [Engineering]: How does the document describe horizontal scaling?
+EXPECTED (approx): Kubernetes HPA scales services using CPU, memory, and custom metrics such as queue length; EC2 auto-scaling groups support the underlying infrastructure; stateless services make horizontal scaling easier.
+SOURCE: DS-RPC-01/data/engineering/engineering_master_doc.md
+
+Q3 [Engineering]: What disaster-recovery targets and drill frequency are specified?
+EXPECTED (approx): RTO is 4 hours, RPO is 15 minutes, and disaster-recovery drills are quarterly.
+SOURCE: DS-RPC-01/data/engineering/engineering_master_doc.md
+
+Q4 [Engineering]: What responsibilities does the API Gateway have?
+EXPECTED (approx): It is the centralized entry point; it handles routing, authentication, authorization, rate limiting, API versioning/documentation, request logging, and basic analytics.
+SOURCE: DS-RPC-01/data/engineering/engineering_master_doc.md
+
+Q5 [Engineering]: What controls are described for production releases?
+EXPECTED (approx): Production releases are scheduled bi-weekly, require manual approval, and use blue-green or canary deployment strategies.
+SOURCE: DS-RPC-01/data/engineering/engineering_master_doc.md
+
+## Finance
+
+Q6 [Finance]: How much did revenue and net income grow in 2024 year over year?
+EXPECTED (approx): Revenue grew 25%; net income grew 12%.
+SOURCE: DS-RPC-01/data/finance/financial_summary.md
+
+Q7 [Finance]: What were the 2024 gross and net margins, and how did they compare with their benchmarks?
+EXPECTED (approx): Gross margin was 60% versus a 55% benchmark; net margin was 12% versus a 10% benchmark.
+SOURCE: DS-RPC-01/data/finance/financial_summary.md
+
+Q8 [Finance]: What was Days Sales Outstanding, and what does the report say it indicates?
+EXPECTED (approx): DSO was 45 days versus a 30-day industry benchmark; the report says receivables collection could improve.
+SOURCE: DS-RPC-01/data/finance/financial_summary.md
+
+Q9 [Finance]: How much were vendor services, and which categories made up most of that expense?
+EXPECTED (approx): Vendor services totaled $30M: marketing-related expenses were 40%, training/education 30%, software subscriptions 25%, and miscellaneous expenses 5%.
+SOURCE: DS-RPC-01/data/finance/financial_summary.md
+
+Q10 [Finance]: What was 2024 cash flow from operations, and what affected liquidity?
+EXPECTED (approx): Operating cash flow was positive at $50M, up 20%; delayed vendor payment cycles slightly affected liquidity in the second half.
+SOURCE: DS-RPC-01/data/finance/financial_summary.md
+
+## General
+
+Q11 [General]: What are the annual, sick, and casual leave entitlements?
+EXPECTED (approx): Annual leave is 15–21 days depending on state policy; sick leave is 12 days per year; casual leave is 7 days, state-specific.
+SOURCE: DS-RPC-01/data/general/employee_handbook.md
+
+Q12 [General]: What tuition or certification reimbursement is available, and what conditions apply?
+EXPECTED (approx): Up to ₹50,000 per year for relevant courses, with manager and HR approval; the employee must serve one year after reimbursement or repay the amount.
+SOURCE: DS-RPC-01/data/general/employee_handbook.md
+
+Q13 [General]: What does the handbook say about overtime?
+EXPECTED (approx): Overtime is voluntary, requires prior manager approval, and is paid at double the regular wage; some roles may receive compensatory time off instead.
+SOURCE: DS-RPC-01/data/general/employee_handbook.md
+
+Q14 [General]: What are the hotel and meal limits for official travel claims?
+EXPECTED (approx): Hotel accommodation is reimbursed up to ₹3,000 per night with a bill; meals are limited to ₹500 per day. Claims and original bills should be submitted within 30 days.
+SOURCE: DS-RPC-01/data/general/employee_handbook.md
+
+Q15 [General]: How soon should a payroll discrepancy be reported, and when should it be resolved?
+EXPECTED (approx): Raise it with HR within 5 working days of salary credit; the issue is to be resolved within 7 working days.
+SOURCE: DS-RPC-01/data/general/employee_handbook.md
+
+## Marketing
+
+Q16 [Marketing]: What was the InstantPay sign-up target in Q1, and what result did the report give?
+EXPECTED (approx): The target was 50,000 sign-ups; 52,000 were achieved, exceeding the target by 4%.
+SOURCE: DS-RPC-01/data/marketing/marketing_report_q1_2024.md
+
+Q17 [Marketing]: How did Q2 customer acquisition and conversion compare with targets?
+EXPECTED (approx): 190,000 customers were acquired against a 200,000 target; 55% came from Southeast Asia. Conversion was 12.1%, slightly above the 12.0% target.
+SOURCE: DS-RPC-01/data/marketing/marketing_report_q2_2024.md
+
+Q18 [Marketing]: What were Q3's acquisition results in Latin America, and what preliminary ROI was reported?
+EXPECTED (approx): 165,000 customers were acquired against a target of 180,000; 45% came from Latin America. Preliminary ROI was 3.6x.
+SOURCE: DS-RPC-01/data/marketing/marketing_report_q3_2024.md
+
+Q19 [Marketing]: What were the Q4 acquisition, revenue, spend, and ROI targets?
+EXPECTED (approx): 220,000 new customers, $11M revenue, $2.5M marketing spend, and a 4.4x ROI target.
+SOURCE: DS-RPC-01/data/marketing/market_report_q4_2024.md
+
+Q20 [Marketing]: What annual CAC and digital ROAS does the 2024 marketing report cite?
+EXPECTED (approx): CAC was $150 per new customer, down from $180 in 2023; digital ROAS was 4.5x.
+SOURCE: DS-RPC-01/data/marketing/marketing_report_2024.md
+
+## C-Level (All): mixed-department checks
+
+Q21 [All/C-Level]: Summarize Engineering's disaster-recovery targets and Finance's DSO concern.
+EXPECTED (approx): Engineering specifies a 4-hour RTO and 15-minute RPO. Finance reports DSO of 45 days against a 30-day benchmark and recommends improving receivables collection.
+SOURCE: DS-RPC-01/data/engineering/engineering_master_doc.md; DS-RPC-01/data/finance/financial_summary.md
+
+Q22 [All/C-Level]: Compare the General training reimbursement policy with Finance's training and education expense share.
+EXPECTED (approx): General allows up to ₹50,000 per year for relevant training with manager and HR approval and a one-year service/repayment condition. Finance says training and education were 30% of $30M vendor services (about $9M).
+SOURCE: DS-RPC-01/data/general/employee_handbook.md; DS-RPC-01/data/finance/financial_summary.md
+
+Q23 [All/C-Level]: What did Q3 Marketing achieve, and what production-release controls does Engineering describe?
+EXPECTED (approx): Marketing acquired 165,000 customers, with 45% from Latin America, and reported preliminary 3.6x ROI. Engineering describes scheduled bi-weekly production releases, manual approval, and blue-green or canary deployment.
+SOURCE: DS-RPC-01/data/marketing/marketing_report_q3_2024.md; DS-RPC-01/data/engineering/engineering_master_doc.md
+
+Q24 [All/C-Level]: Give a brief Q4 Marketing progress update alongside Finance's 2024 margin figures.
+EXPECTED (approx): By mid-December Marketing had acquired 180,000 of its 220,000 target and generated $9.5M toward an $11M revenue target; preliminary ROI was 4.0x. Finance reports 60% gross margin and 12% net margin.
+SOURCE: DS-RPC-01/data/marketing/market_report_q4_2024.md; DS-RPC-01/data/finance/financial_summary.md
+
+Q25 [All/C-Level]: Combine the handbook's reimbursement submission deadline with Marketing's annual customer-retention result.
+EXPECTED (approx): The handbook says submit expense claims with original bills within 30 days. Marketing reports a 10% increase in customer retention from its email campaigns.
+SOURCE: DS-RPC-01/data/general/employee_handbook.md; DS-RPC-01/data/marketing/marketing_report_2024.md

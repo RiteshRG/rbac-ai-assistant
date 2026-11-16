@@ -43,6 +43,34 @@ class BackendClientTests(unittest.TestCase):
         self.assertNotIn("employee_id", captured["json"])
         self.assertEqual(captured["timeout"], 3)
 
+    def test_cloud_run_iam_token_is_sent_separately_from_the_employee_token(self) -> None:
+        captured = {}
+
+        def fake_request(method, url, **kwargs):
+            captured.update(method=method, url=url, **kwargs)
+            return httpx.Response(200, json={"profile": "ok"})
+
+        client = HttpBackendClient(
+            "https://assistant.example.test",
+            3,
+            cloud_run_iam_auth=True,
+        )
+        with (
+            patch(
+                "streamlit_app.backend_client.get_cloud_run_identity_token",
+                return_value="cloud-run-id-token",
+            ) as identity_token,
+            patch("streamlit_app.backend_client.httpx.request", fake_request),
+        ):
+            client.me("employee-app-token")
+
+        identity_token.assert_called_once_with("https://assistant.example.test")
+        self.assertEqual(
+            captured["headers"]["X-Serverless-Authorization"],
+            "Bearer cloud-run-id-token",
+        )
+        self.assertEqual(captured["headers"]["Authorization"], "Bearer employee-app-token")
+
     def test_protected_401_raises_session_expired(self) -> None:
         client = HttpBackendClient("https://assistant.example.test", 3)
         with patch(

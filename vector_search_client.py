@@ -14,6 +14,11 @@ from urllib.request import Request, urlopen
 
 import jwt
 
+from config.cloud_run_auth import (
+    CloudRunIdentityError,
+    cloud_run_iam_auth_enabled,
+    get_cloud_run_identity_token,
+)
 from config.retrieval import DEFAULT_SEARCH_TOP_K
 from config.vector_client import (
     MAX_RESPONSE_BYTES,
@@ -70,6 +75,7 @@ class RemoteSearchConfig:
     token_issuer: str
     token_audience: str
     token_ttl_seconds: int
+    cloud_run_iam_auth: bool = False
 
     @classmethod
     def from_environment(cls) -> RemoteSearchConfig:
@@ -127,6 +133,7 @@ class RemoteSearchConfig:
             token_issuer=issuer,
             token_audience=audience,
             token_ttl_seconds=token_ttl_seconds,
+            cloud_run_iam_auth=cloud_run_iam_auth_enabled(),
         )
 
 
@@ -206,14 +213,25 @@ class RemoteDocumentSearchAdapter:
             ensure_ascii=False,
             allow_nan=False,
         ).encode("utf-8")
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        }
+        if self._config.cloud_run_iam_auth:
+            try:
+                identity_token = get_cloud_run_identity_token(
+                    self._config.service_url
+                )
+            except CloudRunIdentityError:
+                raise VectorSearchError(
+                    "Unable to authenticate to the vector search service."
+                ) from None
+            headers["X-Serverless-Authorization"] = f"Bearer {identity_token}"
         request = Request(
             f"{self._config.service_url}/internal/v1/search",
             data=payload,
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-            },
+            headers=headers,
             method="POST",
         )
 

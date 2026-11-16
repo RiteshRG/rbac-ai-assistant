@@ -357,7 +357,10 @@ def classify_request_node(
     llm: Any,
     employee_repository: Any | None = None,
 ) -> GraphState:
-    """Run the classifier node and write the category back into graph state."""
+    """Classify the request; retrieval enforces document access from trusted groups.
+
+    The repository parameter remains for compatibility with existing callers.
+    """
     print("Classifying your request with the selected model...")
     try:
         classification = classify_query(llm, state["query"])
@@ -368,70 +371,6 @@ def classify_request_node(
 
     state["category"] = classification.category
     state["classification_reason"] = classification.reason
-
-    if (
-        classification.category == "document_question"
-        and classification.requested_access_groups
-    ):
-        known_groups = {
-            group.casefold(): group for group in _department_document_groups()
-        }
-        requested_groups = list(
-            dict.fromkeys(
-                known_groups[group.casefold()]
-                for group in classification.requested_access_groups
-                if group.casefold() in known_groups
-            )
-        )
-        if requested_groups:
-            repository = employee_repository or SQLiteEmployeeRepository()
-            try:
-                profile_groups = repository.get_access_groups(state["employee_id"])
-            except EmployeeRepositoryError as exc:
-                logger.warning(
-                    "document_authorization outcome=profile_error error_type=%s",
-                    type(exc).__name__,
-                )
-                state["status"] = "error"
-                state["answer"] = (
-                    "Document access could not be verified. Please try again later."
-                )
-                state["citations"] = []
-                return state
-
-            if (
-                not isinstance(profile_groups, (list, tuple))
-                or not profile_groups
-                or any(
-                    not isinstance(group, str) or not group.strip()
-                    for group in profile_groups
-                )
-            ):
-                state["status"] = "error"
-                state["answer"] = (
-                    "Document access could not be verified. Please try again later."
-                )
-                state["citations"] = []
-                return state
-
-            allowed_groups = {group.casefold() for group in profile_groups}
-            denied_groups = [
-                group
-                for group in requested_groups
-                if "all" not in allowed_groups
-                and group.casefold() not in allowed_groups
-                and group.casefold() != "general"
-            ]
-            if denied_groups:
-                departments = ", ".join(denied_groups)
-                state["status"] = "denied"
-                state["answer"] = (
-                    "Access denied: your profile does not have access to "
-                    f"{departments} department documents."
-                )
-                state["citations"] = []
-                logger.info("document_authorization outcome=denied")
-                return state
 
     if classification.category == "document_question":
         state["status"] = "ok"

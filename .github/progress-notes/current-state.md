@@ -5,8 +5,8 @@
 ## Current Architecture Decision
 
 - **Approved employee app:** Streamlit calls the FastAPI app; the backend uses Firestore for provisioned employee profiles and employee-owned chat history. Streamlit never connects directly to Firestore or other data services.
-- **Selected stack:** FastAPI, LangChain, LangGraph, Streamlit, ChromaDB, and Firestore for employee/chat records. Firestore is an approved external data service; deployment remains out of scope.
-- **Data boundaries:** ChromaDB stores approved unstructured document chunks, embeddings, and retrieval metadata only. The HR CSV remains a local file accessed only by the separately authorized, bounded, read-only backend workflow. Neither employee profiles nor HR rows are ingested into ChromaDB.
+- **Selected stack:** FastAPI, LangChain, LangGraph, Streamlit, ChromaDB, and Firestore for employee/chat records. Deployment target is three Cloud Run services in project `finsolve-rbac-assistant` (`unigoa.ac.in`) / `asia-south1`; pushes to `main` are intended to trigger GitHub Actions through Workload Identity Federation. No cloud deployment has been run.
+- **Data boundaries:** ChromaDB stores approved unstructured document chunks, embeddings, and retrieval metadata only. The HR CSV is supplied from Secret Manager to the Assistant API image as a BuildKit secret and remains accessible only through the separately authorized, bounded, read-only backend workflow. It is not part of Docker build contexts or ChromaDB.
 - **SQLite:** `employee_profiles.py` and `scripts/provision_local_users.py` remain a local prototype; the employee-facing FastAPI app reads profiles from Firestore.
 - **LLM privacy:** the configured provider selected by `LLM_PROVIDER` may receive questions and retrieved context; provider terms and review remain required before real use.
 
@@ -36,6 +36,7 @@ Keep the supplied `DS-RPC-01/` dataset as the current source; avoid duplicating 
 
 - **ChromaDB and vector service (implemented):** `vector_service/chroma_client.py` initializes a persistent client using the existing `vector_db/` data directory by default; `CHROMA_PERSIST_DIRECTORY` can override it without moving or rebuilding data. `vector_service/chunking.py` creates heading-aware chunks under the model token limit. Run `python -m vector_service.ingest_documents` to ingest only Engineering, Finance, General, and Marketing Markdown files, with stable IDs, batched upserts, and stale-chunk cleanup. `vector_service/retrieval.py` builds mandatory access-group filters from trusted profile groups. `vector_service.app` exposes only the internal authenticated search API, liveness, and readiness routes; `vector_service/search_test_app.py` remains a developer-only all-department CLI and is never an API route. The nine approved Markdown files have been ingested as 259 chunks.
 - **Graph search modes (implemented):** `vector_search_client.py` preserves the graph's `search(employee_id, query, n_results)` interface. `VECTOR_SEARCH_MODE=local` is the default and uses the in-process Chroma service; `remote` signs profile-derived short-lived claims and calls `vector_service` over HTTP. Adaptive retrieval remains graph-side and is unchanged by the adapter.
+- **Document authorization:** classification selects the workflow but does not authorize or deny document groups. Document retrieval derives access groups from the trusted employee profile and the vector service applies its server-built Chroma `access_group` metadata filter. HR CSV authorization remains separate and unchanged.
 - **Implemented employee API:** `app_api/` provides employee-ID/password login, short-lived signed app tokens, current-profile authorization, health/readiness routes, employee-owned Firestore chats/messages, and the assistant ask endpoint. Access groups are re-read from Firestore on protected requests and are never taken from the password-hash key or client.
 - **Implemented Streamlit UI:** `streamlit_app/` provides public landing/login/privacy/terms pages and a protected chat page. It communicates only through `backend_client.py`; mock mode requires explicit `ASSISTANT_API_MODE=mock`.
 - **Single-command launcher:** run `python run_app.py` from the repository root to start the API and Streamlit UI together. If remote vector search points to loopback, it also starts the vector API; Ctrl+C stops owned processes.
@@ -44,27 +45,26 @@ Keep the supplied `DS-RPC-01/` dataset as the current source; avoid duplicating 
 - **SQLite:** local app database at `data/app.sqlite3`; it is generated locally and ignored by Git.
 - **HR CSV:** local source file queried through approved read-only operations; the Firestore app derives permission from `HR` and `All`/C-Level access groups and revalidates it before access. Other groups remain denied.
 - **Secrets and sensitive inputs:** keep `.env`, employee seed CSVs, HR data, and generated local databases/vector-store files out of version control.
+- **Cloud Run readiness (implemented, not deployed):** Cloud Run callers can optionally send IAM ID tokens separately from employee/vector tokens; Firestore can use attached Application Default Credentials. The deployment workflow builds the static approved-document index, injects the HR CSV as a build secret, and deploys Vector API → Assistant API → Streamlit. The HR CSV is removed from the current Git index, but its earlier Git history still needs an approved cleanup before pushing.
 - The development console still uses its simulated role selector; it is separate from the authenticated Streamlit/API path.
 
 ## HR CSV Storage
 
-- **Decision:** keep the HR CSV as a local file during development; do not upload it to a cloud storage service.
+- **Decision:** keep the HR CSV local for development and in Secret Manager for CI image builds; do not create a bucket. The final Assistant API image contains the file.
 - The backend reads it only through fixed, validated, read-only operations after checking the dedicated HR CSV permission. The LLM/user cannot select a file path or access it directly.
 - The HR CSV is not added to ChromaDB because it contains structured employee rows and needs exact, bounded queries.
-- If deployed later, revisit how to distribute and protect the file; deployment design is not decided.
 
 ## Current Scope and Next Checks
 
 - The selected scope is FastAPI, LangChain, LangGraph, Streamlit, and ChromaDB, with Firestore for employee/chat records and local SQLite retained only as a prototype. The internal vector API, local/remote search adapter, ChromaDB initialization, Markdown chunking/ingestion, profile-backed RBAC retrieval, employee API, Firestore chat store, Streamlit UI, and local LangGraph console are implemented.
 - The runnable LangGraph console is a development prototype: users select a simulated role, then the graph classifies the request, keeps document retrieval filtered to that role, and routes authorized HR or `All`/C-Level CSV questions to the existing Phase 1 graph. This is not authentication; the separate app derives permissions from Firestore.
-- Validation: 86 focused API, settings, backend-client, launcher, vector-search, graph, and HR tests passed offline; `py_compile` passed for changed Python files. Streamlit 1.67.0 is installed; `st.page_link` compatibility was checked. Full browser/Firestore/model-provider checks remain unrun.
-- Next: review the UI with Streamlit installed and manually validate against an explicitly configured development Firestore project and model provider.
+- Validation: 86 focused API, settings, backend-client, launcher, vector-search, graph, and HR tests passed offline; the latest Cloud Run/ADC targeted tests pass (18 tests). All three Docker images built locally; the Vector image contains 259 indexed chunks and returned a Marketing Q4 query result, and the Assistant image contains the HR CSV from a BuildKit secret. Compose and workflow YAML parsed. Live Firestore/provider checks and Cloud Run deployment remain unrun.
+- Next: configure GCP APIs, runtime/deployer identities, WIF, Artifact Registry, Secret Manager, and the GitHub repository variables listed in `.github/cloud-run-deployment-plan.md`; clean the HR CSV out of remote Git history only after explicit approval, then push to `main`.
 - The LangGraph console and standalone model API test use the shared `LLM_PROVIDER` setting to select Gemini or Groq, with provider-specific keys and model names in `.env`.
 - Phase 1 HR CSV question-answering remains implemented in `hr_csv/agent.py`, `hr_csv/service.py`, and `scripts/hr_csv_agent_test.py`. It supplies detailed field descriptions and dataset quirks to the planner, validates JSON operation plans, reads the local CSV read-only, supports date/location filters, duplicate-ID checks, tied extrema, bounded count details, aliases, and clarification/out-of-scope responses. The standalone console remains a simulated-HR development test.
 - Main-graph integration reuses the Phase 1 graph from `langgraph_console_skeleton.py`; it does not duplicate CSV planning or operations. SQLite authentication/provisioning tests remain, and the console now has development-only role selection. Run the offline suite and manually review the 12-question live-model evaluation before treating the integration as production-ready.
 - The employee app resolves identity from the Firestore profile on every request and revalidates HR access at the data boundary. The separate console role selector remains a development simulation.
 - The Firestore-backed implementation is a demonstration and has not been validated against live credentials, provider services, or production requirements.
-- Deployment decisions are explicitly deferred.
 
 ## Update Protocol
 
