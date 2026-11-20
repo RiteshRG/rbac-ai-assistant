@@ -1,3 +1,5 @@
+"""Tests for real and mock Streamlit backend client behavior."""
+
 from __future__ import annotations
 
 import unittest
@@ -16,9 +18,11 @@ from streamlit_app.backend_client import (
 
 class BackendClientTests(unittest.TestCase):
     def test_real_client_sends_only_question_and_chat_id_with_bearer_token(self) -> None:
+        """Verify the real ask client sends only the question and chat ID with bearer auth; no explicit parameters; return None; unittest discovers and calls this test."""
         captured = {}
 
         def fake_request(method, url, **kwargs):
+            """Capture one mocked HTTP request and return a valid response; method, url, and kwargs describe the request; return an httpx response; the test's patched HTTP client calls this callback."""
             captured.update(method=method, url=url, **kwargs)
             return httpx.Response(
                 200,
@@ -44,9 +48,11 @@ class BackendClientTests(unittest.TestCase):
         self.assertEqual(captured["timeout"], 3)
 
     def test_cloud_run_iam_token_is_sent_separately_from_the_employee_token(self) -> None:
+        """Verify platform identity and employee bearer tokens use separate headers; no explicit parameters; return None; unittest discovers and calls this test."""
         captured = {}
 
         def fake_request(method, url, **kwargs):
+            """Capture one mocked HTTP request and return a profile response; method, url, and kwargs describe the request; return an httpx response; the test's patched HTTP client calls this callback."""
             captured.update(method=method, url=url, **kwargs)
             return httpx.Response(200, json={"profile": "ok"})
 
@@ -72,6 +78,7 @@ class BackendClientTests(unittest.TestCase):
         self.assertEqual(captured["headers"]["Authorization"], "Bearer employee-app-token")
 
     def test_protected_401_raises_session_expired(self) -> None:
+        """Verify a protected 401 becomes SessionExpiredError; no explicit parameters; return None; unittest discovers and calls this test."""
         client = HttpBackendClient("https://assistant.example.test", 3)
         with patch(
             "streamlit_app.backend_client.httpx.request",
@@ -81,6 +88,7 @@ class BackendClientTests(unittest.TestCase):
                 client.list_chats("expired-token")
 
     def test_403_preserves_only_the_backend_error_code_for_policy_handling(self) -> None:
+        """Verify a 403 retains safe status and policy code metadata; no explicit parameters; return None; unittest discovers and calls this test."""
         client = HttpBackendClient("https://assistant.example.test", 3)
         with patch(
             "streamlit_app.backend_client.httpx.request",
@@ -100,6 +108,7 @@ class BackendClientTests(unittest.TestCase):
         self.assertEqual(raised.exception.code, "policy_changed")
 
     def test_login_uses_generic_credential_failure(self) -> None:
+        """Verify login failures expose only the generic credential message; no explicit parameters; return None; unittest discovers and calls this test."""
         client = HttpBackendClient("https://assistant.example.test", 3)
         with patch(
             "streamlit_app.backend_client.httpx.request",
@@ -113,6 +122,7 @@ class BackendClientTests(unittest.TestCase):
         self.assertEqual(str(raised.exception), "Invalid employee ID or password.")
 
     def test_mock_requires_explicit_selection_and_marks_answers_as_fake(self) -> None:
+        """Verify mock mode is explicit and its answer/citation are clearly fake; no explicit parameters; return None; unittest discovers and calls this test."""
         with patch.dict(
             "os.environ",
             {"ASSISTANT_API_MODE": "real", "ASSISTANT_API_URL": ""},
@@ -128,6 +138,7 @@ class BackendClientTests(unittest.TestCase):
         self.assertIn("not a real citation", answer["citations"][0])
 
     def test_blank_optional_environment_settings_use_real_client_defaults(self) -> None:
+        """Verify blank optional environment settings select the real client and default timeout; no explicit parameters; return None; unittest discovers and calls this test."""
         with patch.dict(
             "os.environ",
             {

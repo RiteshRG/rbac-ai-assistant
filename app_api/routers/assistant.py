@@ -19,6 +19,7 @@ def ask(
     request: Request,
     profile: EmployeeProfile = Depends(require_employee),
 ) -> AskResponse:
+    """Answer and persist one authenticated employee question; body contains the question and optional chat ID, request provides app services, and profile is resolved by require_employee; return the answer, status, citations, and owned chat ID or raise HTTPException; FastAPI calls this route."""
     chat_store = request.app.state.chat_store
     try:
         history = chat_store.load_history(

@@ -1,3 +1,5 @@
+"""Tests for environment-derived application API settings."""
+
 from __future__ import annotations
 
 import os
@@ -10,6 +12,7 @@ from app_api.settings import AppSettings
 
 class SettingsTests(unittest.TestCase):
     def test_blank_optional_environment_settings_use_defaults(self) -> None:
+        """Verify blank optional environment values resolve to documented defaults; no explicit parameters; return None; unittest discovers and calls this test."""
         environment = {
             "FIREBASE_PROJECT_ID": "test-project",
             "FIREBASE_SERVICE_ACCOUNT_PATH": "service-account.json",
@@ -28,6 +31,7 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(settings.app_token_audience, "finsolve-streamlit-app")
 
     def test_application_default_credentials_allow_an_empty_service_account_path(self) -> None:
+        """Verify application-default credentials permit an empty service-account path; no explicit parameters; return None; unittest discovers and calls this test."""
         environment = {
             "FIREBASE_PROJECT_ID": "test-project",
             "FIREBASE_SERVICE_ACCOUNT_PATH": "",
@@ -43,6 +47,7 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(settings.firebase_service_account_path, Path("."))
 
     def test_invalid_application_default_credentials_setting_is_rejected(self) -> None:
+        """Verify unsupported application-default credential settings are rejected; no explicit parameters; return None; unittest discovers and calls this test."""
         environment = {
             "FIREBASE_PROJECT_ID": "test-project",
             "FIREBASE_SERVICE_ACCOUNT_PATH": "service-account.json",

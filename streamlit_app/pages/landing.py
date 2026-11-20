@@ -1,3 +1,5 @@
+"""Public landing page rendered by Streamlit navigation."""
+
 from __future__ import annotations
 
 import streamlit as st

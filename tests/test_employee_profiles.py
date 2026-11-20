@@ -20,15 +20,48 @@ from scripts.provision_local_users import build_profiles
 
 class SQLiteEmployeeRepositoryTests(unittest.TestCase):
     def setUp(self) -> None:
+        """Prepare temporary files and fixture state for each test method.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None.
+
+            Called by:
+                the unittest framework before each test method in this class.
+        """
         self.temporary_directory = tempfile.TemporaryDirectory()
         self.directory = Path(self.temporary_directory.name)
         self.database_path = self.directory / "data" / "app.sqlite3"
         self.repository = SQLiteEmployeeRepository(self.database_path)
 
     def tearDown(self) -> None:
+        """Remove temporary files and release fixture state after each test method.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None.
+
+            Called by:
+                the unittest framework after each test method in this class.
+        """
         self.temporary_directory.cleanup()
 
     def test_authentication_returns_explicit_hr_csv_permission(self) -> None:
+        """Verify authentication returns explicit hr csv permission.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         self.repository.provision(
             [
                 ProvisionedEmployee(
@@ -54,6 +87,17 @@ class SQLiteEmployeeRepositoryTests(unittest.TestCase):
         self.assertIsNone(self.repository.authenticate("missing", "secret_HR"))
 
     def test_all_profile_is_provisioned_with_hr_csv_access(self) -> None:
+        """Verify all profile is provisioned with hr csv access.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         profile = ProvisionedEmployee(
             employee_id="ALL001",
             email="all001@example.test",
@@ -72,6 +116,17 @@ class SQLiteEmployeeRepositoryTests(unittest.TestCase):
         self.assertTrue(context.has_hr_csv_permission)
 
     def test_all_profile_cannot_be_provisioned_without_hr_csv_access(self) -> None:
+        """Verify all profile cannot be provisioned without hr csv access.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         profile = ProvisionedEmployee(
             employee_id="ALL001",
             email="all001@example.test",
@@ -86,6 +141,17 @@ class SQLiteEmployeeRepositoryTests(unittest.TestCase):
             self.repository.provision([profile])
 
     def test_inactive_profiles_are_denied_for_authentication_and_permissions(self) -> None:
+        """Verify inactive profiles are denied for authentication and permissions.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         self.repository.provision(
             [
                 ProvisionedEmployee(
@@ -111,12 +177,34 @@ class SQLiteEmployeeRepositoryTests(unittest.TestCase):
         self.assertIsNone(self.repository.get_access_groups("HR001"))
 
     def test_missing_database_reports_provisioning_command(self) -> None:
+        """Verify missing database reports provisioning command.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         with self.assertRaisesRegex(EmployeeRepositoryError, "provision_local_users"):
             self.repository.authenticate("HR001", "secret_HR")
 
 
 class LocalProvisioningTests(unittest.TestCase):
     def setUp(self) -> None:
+        """Prepare temporary files and fixture state for each test method.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None.
+
+            Called by:
+                the unittest framework before each test method in this class.
+        """
         self.temporary_directory = tempfile.TemporaryDirectory()
         self.directory = Path(self.temporary_directory.name)
         self.login_csv = self.directory / "login.csv"
@@ -149,16 +237,51 @@ class LocalProvisioningTests(unittest.TestCase):
         )
 
     def tearDown(self) -> None:
+        """Remove temporary files and release fixture state after each test method.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None.
+
+            Called by:
+                the unittest framework after each test method in this class.
+        """
         self.temporary_directory.cleanup()
 
     @staticmethod
     def _write_csv(path: Path, fields: list[str], rows: list[dict[str, str]]) -> None:
+        """Write the supplied field names and rows to a temporary CSV fixture.
+
+            Parameters:
+                path (`Path`): the path input.
+                fields (`list[str]`): the fields input.
+                rows (`list[dict[str, str]]`): the rows input.
+
+            Returns:
+                The resulting value (`None`).
+
+            Called by:
+                LocalProvisioningTests.setUp.
+        """
         with path.open("w", encoding="utf-8", newline="") as output:
             writer = csv.DictWriter(output, fieldnames=fields)
             writer.writeheader()
             writer.writerows(rows)
 
     def test_provisioning_maps_hr_and_all_access_groups(self) -> None:
+        """Verify provisioning maps hr and all access groups.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         profiles = build_profiles(self.login_csv, self.mapping_csv)
         by_id = {profile.employee_id: profile for profile in profiles}
 
@@ -169,6 +292,17 @@ class LocalProvisioningTests(unittest.TestCase):
         self.assertNotEqual(by_id["HR001"].password_hash, "secret_HR")
 
     def test_profiles_share_document_access_repository_contract(self) -> None:
+        """Verify profiles share document access repository contract.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         profiles = build_profiles(self.login_csv, self.mapping_csv)
         repository = SQLiteEmployeeRepository(self.directory / "app.sqlite3")
         repository.provision(profiles)

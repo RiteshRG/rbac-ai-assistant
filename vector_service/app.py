@@ -30,6 +30,18 @@ logger = logging.getLogger(__name__)
 
 class VectorAPIError(Exception):
     def __init__(self, status_code: int, code: str, message: str) -> None:
+        """Store the HTTP status, client-safe code, and message.
+
+        Args:
+            status_code: HTTP status code to return.
+            code: Stable error identifier for the response body.
+            message: Safe description to return to the client.
+
+        Returns:
+            None.
+
+        Called by: API helpers and handlers when translating service failures.
+        """
         super().__init__(message)
         self.status_code = status_code
         self.code = code
@@ -37,10 +49,31 @@ class VectorAPIError(Exception):
 
 
 def _error_body(code: str, message: str) -> dict[str, dict[str, str]]:
+    """Build the standard JSON error payload.
+
+    Args:
+        code: Stable error identifier.
+        message: Safe description of the failure.
+
+    Returns:
+        A nested dictionary suitable for a JSON response body.
+
+    Called by: The FastAPI exception handlers in ``create_app``.
+    """
     return {"error": {"code": code, "message": message}}
 
 
 def _ready_collection() -> Any:
+    """Open the collection and reject it unless it contains indexed chunks.
+
+    Args:
+        None.
+
+    Returns:
+        The initialized, nonempty Chroma collection.
+
+    Called by: The FastAPI readiness and search handlers.
+    """
     try:
         collection = get_document_collection()
     except Exception as exc:
@@ -71,6 +104,16 @@ def _ready_collection() -> Any:
 
 
 def _verified_access_groups(authorization: str | None) -> tuple[str, ...]:
+    """Verify the bearer token and obtain its trusted access groups.
+
+    Args:
+        authorization: Raw Authorization header, or ``None`` if absent.
+
+    Returns:
+        The access groups from the verified token identity.
+
+    Called by: The FastAPI search handler.
+    """
     try:
         identity = verify_bearer_token(authorization)
     except TokenVerificationError as exc:
@@ -91,6 +134,16 @@ def _verified_access_groups(authorization: str | None) -> tuple[str, ...]:
 
 
 def create_app() -> FastAPI:
+    """Create the internal vector-search API and register its routes.
+
+    Args:
+        None.
+
+    Returns:
+        A configured FastAPI application.
+
+    Called by: Module initialization to construct the exported ``app``.
+    """
     app = FastAPI(
         title="FinSolve Internal Vector Search",
         docs_url=None,
@@ -103,6 +156,17 @@ def create_app() -> FastAPI:
         _request: Request,
         exc: VectorAPIError,
     ) -> JSONResponse:
+        """Serialize a known vector API failure as its safe HTTP response.
+
+        Args:
+            _request: The request that raised the exception.
+            exc: The translated vector API error.
+
+        Returns:
+            A JSON response with the error's status and safe payload.
+
+        Called by: FastAPI exception dispatch for ``VectorAPIError``.
+        """
         return JSONResponse(
             status_code=exc.status_code,
             content=_error_body(exc.code, exc.message),
@@ -113,6 +177,17 @@ def create_app() -> FastAPI:
         _request: Request,
         _exc: RequestValidationError,
     ) -> JSONResponse:
+        """Return a generic response for request-schema validation failures.
+
+        Args:
+            _request: The request that failed validation.
+            _exc: FastAPI's request validation details.
+
+        Returns:
+            A 422 JSON response without exposing validation internals.
+
+        Called by: FastAPI exception dispatch for ``RequestValidationError``.
+        """
         return JSONResponse(
             status_code=422,
             content=_error_body("invalid_request", "The request body is invalid."),
@@ -123,6 +198,17 @@ def create_app() -> FastAPI:
         _request: Request,
         exc: Exception,
     ) -> JSONResponse:
+        """Log an unexpected exception and return a generic server error.
+
+        Args:
+            _request: The request during which the exception occurred.
+            exc: The unhandled exception.
+
+        Returns:
+            A 500 JSON response without exposing internal details.
+
+        Called by: FastAPI exception dispatch for otherwise unhandled errors.
+        """
         logger.exception(
             "vector_api_unexpected_error error_type=%s",
             type(exc).__name__,
@@ -136,10 +222,30 @@ def create_app() -> FastAPI:
 
     @app.get("/healthz", response_model=HealthResponse)
     def healthz() -> HealthResponse:
+        """Report liveness without opening the vector collection.
+
+        Args:
+            None.
+
+        Returns:
+            A health response with status ``ok``.
+
+        Called by: FastAPI when serving ``GET /healthz``.
+        """
         return HealthResponse(status="ok")
 
     @app.get("/readyz", response_model=HealthResponse)
     def readyz() -> HealthResponse:
+        """Report readiness only after confirming the collection is nonempty.
+
+        Args:
+            None.
+
+        Returns:
+            A health response with status ``ready``.
+
+        Called by: FastAPI when serving ``GET /readyz``.
+        """
         _ready_collection()
         return HealthResponse(status="ready")
 
@@ -148,6 +254,17 @@ def create_app() -> FastAPI:
         body: SearchRequest,
         authorization: Annotated[str | None, Header()] = None,
     ) -> SearchResponse:
+        """Search documents using access groups from a verified bearer token.
+
+        Args:
+            body: Validated search query and requested result count.
+            authorization: Authorization header containing the bearer token.
+
+        Returns:
+            Search results with document text and citation metadata.
+
+        Called by: FastAPI when serving ``POST /internal/v1/search``.
+        """
         groups = _verified_access_groups(authorization)
         collection = _ready_collection()
         service = DocumentSearchService(collection)

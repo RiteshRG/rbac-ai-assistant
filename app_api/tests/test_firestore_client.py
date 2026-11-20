@@ -1,3 +1,5 @@
+"""Tests for server-side Firestore client initialization."""
+
 from __future__ import annotations
 
 import unittest
@@ -11,6 +13,7 @@ from app_api.settings import AppSettings
 
 class FirestoreClientTests(unittest.TestCase):
     def test_application_default_credentials_are_used_without_a_key_file(self) -> None:
+        """Verify Firestore initialization uses application-default credentials without a service-account file; no explicit parameters; return None; unittest discovers and calls this test."""
         settings = AppSettings(
             firebase_project_id="test-project",
             firebase_service_account_path=Path("."),

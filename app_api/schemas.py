@@ -36,6 +36,7 @@ class LoginRequest(StrictModel):
     @field_validator("employee_id")
     @classmethod
     def trim_employee_id(cls, value: str) -> str:
+        """Strip whitespace and reject an empty employee ID; value is the submitted ID and cls is the validated model; return the normalized ID; Pydantic's field validator calls this method."""
         value = value.strip()
         if not value:
             raise ValueError("Employee ID is required.")
@@ -70,6 +71,7 @@ class AskRequest(StrictModel):
     @field_validator("question")
     @classmethod
     def trim_question(cls, value: str) -> str:
+        """Strip whitespace and enforce question length; value is the submitted question and cls is the validated model; return normalized question text; Pydantic's field validator calls this method."""
         value = value.strip()
         if not value or len(value) > QUESTION_MAX_LENGTH:
             raise ValueError(
@@ -81,6 +83,7 @@ class AskRequest(StrictModel):
     @field_validator("chat_id")
     @classmethod
     def trim_chat_id(cls, value: str | None) -> str | None:
+        """Strip whitespace and reject empty or path-like chat IDs; value is the optional submitted ID and cls is the validated model; return normalized ID or None; Pydantic's field validator calls this method."""
         if value is None:
             return None
         value = value.strip()

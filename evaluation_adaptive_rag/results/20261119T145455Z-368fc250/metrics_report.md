@@ -1,0 +1,52 @@
+# Adaptive RAG Evaluation Report
+
+| Metric | Value | n |
+|---|---:|---:|
+| route_accuracy:adaptive | 0.9523809523809523 | 84 |
+| retrieval_recall_at_5:adaptive | None | 0 |
+| retrieval_hit_at_5:adaptive | None | 0 |
+| retrieval_mrr:adaptive | None | 0 |
+| fact_recall:adaptive | None | 0 |
+| retry_rate:adaptive | 0.047619047619047616 | 84 |
+| groq_rate_limit_retries:adaptive | 0 | 84 |
+| groq_rate_limit_wait_ms:adaptive | 1616754 | 84 |
+| error_fallback_rate:adaptive | 0.2261904761904762 | 84 |
+| latency_p50_ms:adaptive | 13626.5 | 84 |
+| latency_p95_ms:adaptive | 48528.94999999999 | 84 |
+| route_accuracy:baseline | 0.9642857142857143 | 84 |
+| retrieval_recall_at_5:baseline | None | 0 |
+| retrieval_hit_at_5:baseline | None | 0 |
+| retrieval_mrr:baseline | None | 0 |
+| fact_recall:baseline | None | 0 |
+| retry_rate:baseline | 0.0 | 84 |
+| groq_rate_limit_retries:baseline | 0 | 84 |
+| groq_rate_limit_wait_ms:baseline | 1353302 | 84 |
+| error_fallback_rate:baseline | 0.0 | 84 |
+| latency_p50_ms:baseline | 12804.0 | 84 |
+| latency_p95_ms:baseline | 36613.74999999999 | 84 |
+| ragas | None | None |
+
+## Caveats
+- Unverified dataset rows: 50
+- Stale gold traces: 42
+- Ragas metrics require a verified pinned package/API.
+
+## Routing confusion matrix
+```json
+{
+  "document_question": {
+    "document_question": 65,
+    "clarification_needed": 1
+  },
+  "hr_csv_request": {
+    "hr_csv_request": 66,
+    "clarification_needed": 6
+  },
+  "out_of_scope": {
+    "out_of_scope": 18
+  },
+  "general_assistant": {
+    "general_assistant": 12
+  }
+}
+```

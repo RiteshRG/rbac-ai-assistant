@@ -277,9 +277,11 @@ def route_after_classification(state: GraphState) -> str:
 
 def detect_simple_general_query_node(state: GraphState) -> GraphState:
     """Tag an unambiguous greeting/meta-question so classification can be skipped."""
+    print("[Main] Request received.")
     if is_simple_general_assistant_query(state["query"]):
         state["category"] = "general_assistant"
         state["classification_reason"] = "Recognized a greeting or assistant meta-question."
+        print("[Main] Simple general request detected.")
     return state
 
 
@@ -294,6 +296,7 @@ def route_after_simple_general_query(state: GraphState) -> str:
 
 def condense_question_node(state: GraphState, llm: Any) -> GraphState:
     """Rewrite a follow-up as a standalone question without trusting chat text."""
+    print("[Main] Condensing follow-up using conversation history.")
     original_query = state["query"]
     state["original_query"] = original_query
     history = state.get("history", [])
@@ -323,6 +326,7 @@ def condense_question_node(state: GraphState, llm: Any) -> GraphState:
         standalone_query = ""
     if standalone_query and len(standalone_query) <= CONDENSED_QUESTION_MAX_CHARS:
         state["query"] = standalone_query
+    print("[Main] Follow-up condensation complete.")
     return state
 
 
@@ -365,12 +369,14 @@ def classify_request_node(
     try:
         classification = classify_query(llm, state["query"])
     except Exception as exc:  # pragma: no cover - guarded by the graph-level error branch.
+        print(f"[Main] Classification failed ({type(exc).__name__}).")
         state["status"] = "error"
         state["answer"] = f"Classification failed: {exc}"
         return state
 
     state["category"] = classification.category
     state["classification_reason"] = classification.reason
+    print(f"[Main] Request classified as: {classification.category}.")
 
     if classification.category == "document_question":
         state["status"] = "ok"
@@ -410,6 +416,7 @@ def general_assistant_response_node(state: GraphState, llm: Any) -> GraphState:
                 "The selected model returned no text content. Check its API response and availability."
             )
     except Exception as exc:
+        print(f"[Main] General assistant response failed ({type(exc).__name__}).")
         state["answer"] = f"General assistant response failed: {exc}"
         state["citations"] = []
         state["status"] = "error"
@@ -418,6 +425,7 @@ def general_assistant_response_node(state: GraphState, llm: Any) -> GraphState:
     state["answer"] = answer.strip()
     state["citations"] = []
     state["status"] = "ok"
+    print("[Main] General assistant response complete.")
     return state
 
 
@@ -431,6 +439,7 @@ def retrieve_documents_node(
     """Use the existing RBAC-aware retrieval service and keep the search filtered."""
     print("Searching the documents available to this profile...")
     retry_count = state.get("retry_count", 0)
+    print(f"[Main] Document retrieval started (round {retry_count + 1}).")
     search_query = state.get("search_query") or state["query"]
     seen_chunk_ids = set(state.get("seen_chunk_ids", []))
     state["retry_count"] = retry_count
@@ -454,6 +463,7 @@ def retrieve_documents_node(
             n_results=INITIAL_TOP_K if retry_count == 0 else RETRY_TOP_K,
         )
     except Exception as exc:  # pragma: no cover - direct failure is surfaced below.
+        print(f"[Main] Document retrieval failed ({type(exc).__name__}).")
         state["status"] = "error"
         state["answer"] = f"Document retrieval failed for this profile: {exc}"
         state["documents"] = []
@@ -483,6 +493,10 @@ def retrieve_documents_node(
     state["documents"] = documents
     state["seen_chunk_ids"] = list(seen_chunk_ids)
     state["status"] = "ok" if documents else "no_evidence"
+    print(
+        f"[Main] Document retrieval complete: {len(documents)} evidence chunk(s), "
+        f"status={state['status']}."
+    )
     if not documents:
         logger.info(
             "adaptive_retrieval round=%d query_label=%s new_chunks=%d sufficient=not_assessed",
@@ -559,6 +573,7 @@ def generate_grounded_answer_node(state: GraphState, llm: Any) -> GraphState:
             if not answer_text:
                 raise ValueError("The selected model returned no text for the grounded answer.")
         except Exception as exc:  # pragma: no cover - surfaced as explicit graph failure.
+            print(f"[Main] Baseline answer generation failed ({type(exc).__name__}).")
             state["status"] = "error"
             state["answer"] = f"Answer generation failed: {exc}"
             state["citations"] = []
@@ -575,6 +590,7 @@ def generate_grounded_answer_node(state: GraphState, llm: Any) -> GraphState:
         state["status"] = "ok"
         state["sufficient"] = True
         state["used_chunk_ids"] = [_chunk_key(result) for result in results]
+        print("[Main] Baseline answer generated.")
         logger.info(
             "adaptive_retrieval round=%d query_label=%s new_chunks=%d sufficient=disabled",
             round_number,
@@ -592,6 +608,7 @@ def generate_grounded_answer_node(state: GraphState, llm: Any) -> GraphState:
         structured_model = _structured_answer_model(llm)
         response = structured_model.invoke(prompt)
     except Exception as exc:  # pragma: no cover - surfaced as explicit graph failure.
+        print(f"[Main] Grounded answer generation failed ({type(exc).__name__}).")
         state["status"] = "error"
         state["answer"] = f"Answer generation failed: {exc}"
         state["citations"] = []
@@ -607,6 +624,7 @@ def generate_grounded_answer_node(state: GraphState, llm: Any) -> GraphState:
     if parse_failed:
         answer_text = extract_response_text(raw_response)
         if not answer_text:
+            print("[Main] Structured answer parsing failed without raw text.")
             state["status"] = "error"
             state["answer"] = "Answer generation failed: structured output parsing failed and no raw text was available."
             state["citations"] = []
@@ -643,6 +661,10 @@ def generate_grounded_answer_node(state: GraphState, llm: Any) -> GraphState:
             _append_missing_info_note(state)
 
     state["status"] = "ok"
+    print(
+        f"[Main] Grounded answer assessment complete: "
+        f"sufficient={state.get('sufficient')}."
+    )
     logger.info(
         "adaptive_retrieval round=%d query_label=%s new_chunks=%d sufficient=%s",
         round_number,
@@ -655,6 +677,7 @@ def generate_grounded_answer_node(state: GraphState, llm: Any) -> GraphState:
 
 def prepare_document_retry_node(state: GraphState) -> GraphState:
     """Retain useful evidence and prepare a deterministic, distinct search query."""
+    print("[Main] Preparing adaptive retrieval retry.")
     retry_count = state.get("retry_count", 0)
     missing_info = state.get("missing_info", "").strip()
     if not missing_info:
@@ -687,6 +710,7 @@ def prepare_document_retry_node(state: GraphState) -> GraphState:
         _queries_are_near_duplicates(refined_query, prior_query)
         for prior_query in prior_queries
     ):
+        print("[Main] Adaptive retry stopped; no distinct query or retry budget remains.")
         _append_missing_info_note(state)
         state["status"] = "retry_stopped"
         return state
@@ -694,6 +718,7 @@ def prepare_document_retry_node(state: GraphState) -> GraphState:
     state["retry_count"] = retry_count + 1
     state["search_query"] = refined_query
     state["status"] = "retrying"
+    print(f"[Main] Adaptive retry {state['retry_count']} prepared.")
     return state
 
 
@@ -827,9 +852,11 @@ def authorize_hr_csv_access_node(
     employee_repository: Any,
 ) -> GraphState:
     """Resolve HR CSV permission from the selected profile repository."""
+    print("[Main] Checking HR CSV authorization.")
     try:
         context = employee_repository.get_authorization_context(state["employee_id"])
     except EmployeeRepositoryError as exc:
+        print("[Main] HR CSV authorization lookup failed.")
         logger.warning(
             "hr_csv_authorization outcome=repository_error error_type=%s",
             type(exc).__name__,
@@ -845,6 +872,7 @@ def authorize_hr_csv_access_node(
         or context.employee_id != state["employee_id"]
         or not context.has_hr_csv_permission
     ):
+        print("[Main] HR CSV authorization denied.")
         state["answer"] = "Access denied: this employee profile does not have HR CSV permission."
         state["citations"] = []
         state["status"] = "denied"
@@ -853,6 +881,7 @@ def authorize_hr_csv_access_node(
 
     state["authorization_context"] = context
     state["status"] = "hr_csv_authorized"
+    print("[Main] HR CSV authorization granted.")
     logger.info("hr_csv_authorization outcome=allowed")
     return state
 
@@ -864,12 +893,14 @@ def route_after_hr_csv_authorization(state: GraphState) -> str:
 
 def invoke_hr_csv_workflow_node(state: GraphState, csv_graph: Any) -> GraphState:
     """Reuse the Phase 1 graph and return only its final answer to the main graph."""
+    print("[Main] Starting HR CSV workflow.")
     context = state.get("authorization_context")
     if (
         not isinstance(context, EmployeeAuthorizationContext)
         or context.source not in {"sqlite", "firestore", "simulated"}
         or not context.has_hr_csv_permission
     ):
+        print("[Main] HR CSV workflow stopped: authorization is invalid.")
         state["answer"] = "Access denied: this employee profile does not have HR CSV permission."
         state["citations"] = []
         state["status"] = "denied"
@@ -880,6 +911,7 @@ def invoke_hr_csv_workflow_node(state: GraphState, csv_graph: Any) -> GraphState
             hr_csv_initial_state("HR", state["query"], context)
         )
     except Exception as exc:
+        print(f"[Main] HR CSV workflow failed ({type(exc).__name__}).")
         logger.warning(
             "hr_csv_workflow outcome=failed error_type=%s",
             type(exc).__name__,
@@ -892,6 +924,7 @@ def invoke_hr_csv_workflow_node(state: GraphState, csv_graph: Any) -> GraphState
     state["answer"] = csv_state.get("answer") or "The HR CSV workflow returned no answer."
     state["citations"] = ["HR CSV (read-only)"] if csv_state.get("status") == "ok" else []
     state["status"] = csv_state.get("status", "error")
+    print(f"[Main] HR CSV workflow complete: status={state['status']}.")
     return state
 
 

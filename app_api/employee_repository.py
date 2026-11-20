@@ -23,6 +23,7 @@ class EmployeeProfile:
 
     @property
     def has_valid_access_groups(self) -> bool:
+        """Check whether access_groups form a valid authorization set; no explicit parameters; return a validity boolean; authentication and authorization consumers read this property."""
         try:
             effective_access_groups(self.access_groups)
         except AuthorizationError:
@@ -36,11 +37,13 @@ class FirestoreEmployeeRepository:
         database: Any,
         timeout_seconds: float = FIRESTORE_TIMEOUT_SECONDS,
     ) -> None:
+        """Configure employee profile reads; database and timeout_seconds select Firestore and its read timeout; return None; create_app constructs this repository."""
         self._database = database
         self._timeout_seconds = timeout_seconds
         self._employees = database.collection("employees")
 
     def get_profile(self, employee_id: str) -> EmployeeProfile | None:
+        """Read and validate one employee profile; employee_id is normalized as the document ID; return EmployeeProfile or None when absent or invalidly addressed; AuthService and repository methods call this."""
         normalized_id = employee_id.strip()
         if not normalized_id or "/" in normalized_id or "\\" in normalized_id:
             return None
@@ -92,6 +95,7 @@ class FirestoreEmployeeRepository:
         )
 
     def get_access_groups(self, employee_id: str) -> list[str] | None:
+        """Return validated access groups for an active employee; employee_id identifies the profile; return a list or None when access is unavailable; no direct caller appears in project source, so this remains a public repository API."""
         profile = self.get_profile(employee_id)
         if profile is None or not profile.active or not profile.has_valid_access_groups:
             return None
@@ -101,6 +105,7 @@ class FirestoreEmployeeRepository:
         self,
         employee_id: str,
     ) -> EmployeeAuthorizationContext | None:
+        """Build the graph authorization context for an active employee; employee_id identifies the profile; return the context or None when access is unavailable; the LangGraph node in langgraph_console_skeleton.py calls this repository API."""
         profile = self.get_profile(employee_id)
         if profile is None or not profile.active or not profile.has_valid_access_groups:
             return None
@@ -112,4 +117,5 @@ class FirestoreEmployeeRepository:
         )
 
     def check_connection(self) -> None:
+        """Probe Firestore employee collection readiness; no explicit parameters; return None or propagate a service error; the readiness route calls this."""
         self._employees.limit(1).get(timeout=self._timeout_seconds)

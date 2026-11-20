@@ -1,3 +1,5 @@
+"""Tests for safe rendering of persisted assistant messages."""
+
 from __future__ import annotations
 
 import unittest
@@ -8,6 +10,7 @@ from streamlit.testing.v1 import AppTest
 
 class ChatRenderingTests(unittest.TestCase):
     def test_assistant_history_escapes_dollars_before_markdown_rendering(self) -> None:
+        """Verify assistant history escapes dollar signs before Markdown display; no explicit parameters; return None; unittest discovers and calls this test."""
         class Client:
             is_mock = False
 

@@ -15,6 +15,17 @@ class TokenVerificationError(ValueError):
     """Raised with a safe reason code when a bearer token is not authorized."""
 
     def __init__(self, reason: str, detail: str | None = None) -> None:
+        """Create a token rejection with a stable reason and optional detail.
+
+        Args:
+            reason: Safe identifier for the verification failure.
+            detail: Optional internal explanation for logs or diagnostics.
+
+        Returns:
+            None.
+
+        Called by: ``verify_bearer_token`` for rejected token claims or headers.
+        """
         super().__init__(reason)
         self.reason = reason
         self.detail = detail
@@ -27,7 +38,16 @@ class VerifiedIdentity:
 
 
 def verify_bearer_token(authorization: str | None) -> VerifiedIdentity:
-    """Verify a bearer token and validate the trusted identity and group claims."""
+    """Verify a bearer token and validate its trusted identity and group claims.
+
+    Args:
+        authorization: Raw Authorization header, or ``None`` if absent.
+
+    Returns:
+        A verified identity containing its subject and access groups.
+
+    Called by: ``vector_service.app._verified_access_groups`` before API search.
+    """
     if not authorization:
         raise TokenVerificationError("missing_token")
 

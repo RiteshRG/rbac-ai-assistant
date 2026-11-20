@@ -1,3 +1,5 @@
+"""Employee sign-in page rendered by Streamlit navigation."""
+
 from __future__ import annotations
 
 import streamlit as st
@@ -13,6 +15,7 @@ if st.session_state.get("auth_token"):
     st.switch_page("pages/chat.py")
 
 def submit_login() -> None:
+    """Authenticate submitted employee credentials and update session state; no explicit parameters because Streamlit form values are read from session state; return None; Streamlit invokes this form-submit callback."""
     employee_id = st.session_state.get("login_employee_id", "").strip()
     st.session_state.pop("login_employee_id", None)
     password = st.session_state.pop("login_password", "")

@@ -27,7 +27,17 @@ class VectorTokenSettings:
 
 
 def get_vector_settings() -> VectorServiceSettings:
-    """Read vector storage and optional token settings from the environment."""
+    """Read vector storage and optional token settings from the environment.
+
+    Args:
+        None.
+
+    Returns:
+        Settings containing the resolved Chroma directory and optional token
+        configuration values.
+
+    Called by: Chroma client module initialization and ``get_token_settings``.
+    """
     project_root = Path(__file__).resolve().parent.parent
     configured_path = os.getenv("CHROMA_PERSIST_DIRECTORY", "").strip()
     chroma_path = (
@@ -44,7 +54,16 @@ def get_vector_settings() -> VectorServiceSettings:
 
 
 def get_token_settings() -> VectorTokenSettings:
-    """Require the shared token settings when an authenticated route is used."""
+    """Require the shared token settings for authenticated vector routes.
+
+    Args:
+        None.
+
+    Returns:
+        Complete token settings for JWT verification.
+
+    Called by: ``vector_service.auth.verify_bearer_token``.
+    """
     settings = get_vector_settings()
     if not settings.token_secret:
         raise VectorSettingsError("VECTOR_TOKEN_SECRET is required.")

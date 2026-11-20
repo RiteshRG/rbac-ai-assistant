@@ -1,0 +1,13 @@
+{
+  "run_id": "20261119T125352Z-43aa572d",
+  "timestamp": "2026-11-19T12:53:53.295019+00:00",
+  "git_commit_sha": "1a5dca8e2f07ae0112cd683d71aae60556080406",
+  "dataset_version": "1",
+  "dataset_sha256": "cc865adaf8bf03a4dd4eaff23be57cfd2f2f2ba4cc327a61c5be5bbc51f8b1bb",
+  "answer_model": "from app LLM_PROVIDER/GROQ_MODEL or GEMINI_MODEL",
+  "judge_provider": "groq",
+  "judge_model": "EVAL_JUDGE_MODEL",
+  "temperature": 0.1,
+  "ragas_version": "Ragas scoring skipped",
+  "untouched_check": "PASS"
+}

@@ -1,3 +1,5 @@
+"""Protected chat assistant page rendered by Streamlit navigation."""
+
 from __future__ import annotations
 
 import re
@@ -16,20 +18,24 @@ if not st.session_state.get("auth_token"):
 
 
 def _session_expired() -> None:
+    """Clear expired credentials, show the login page, and stop the current run; no explicit parameters; return None by redirecting or stopping; _handle_backend_error calls this on SessionExpiredError."""
     clear_session(expired=True)
     st.switch_page("pages/login.py")
     st.stop()
 
 
 def _plain_label(value: str) -> str:
+    """Escape Markdown metacharacters in a chat title; value is the untrusted label; return escaped text; the chat page script calls this helper while rendering the chat list."""
     return re.sub(r"([\\`*_{}\[\]()#+\-.!|>])", r"\\\1", value)
 
 
 def _escape_markdown_dollars(answer_text: str) -> str:
+    """Escape dollar signs before Markdown rendering; answer_text is the assistant text; return the escaped string; _render_assistant_message calls this helper."""
     return answer_text.replace("$", r"\$")
 
 
 def _citation_chip_label(citation: str) -> str:
+    """Remove a numeric citation prefix for chip display; citation is the backend-provided source label; return the display label; _render_assistant_message calls this helper."""
     prefix, separator, label = citation.partition("] ")
     if separator and prefix.startswith("[") and prefix[1:].isdigit():
         return label
@@ -37,6 +43,7 @@ def _citation_chip_label(citation: str) -> str:
 
 
 def _handle_backend_error(error: BackendError) -> None:
+    """Render a safe UI response for backend failures and update chat state; error contains normalized status and code; return None, possibly redirecting on expiry; the chat page's request-handling flow calls this helper."""
     if isinstance(error, SessionExpiredError):
         _session_expired()
     if error.status_code == 403 and error.code == "policy_changed":
@@ -55,6 +62,7 @@ def _handle_backend_error(error: BackendError) -> None:
 
 
 def _render_assistant_message(message: dict[str, Any]) -> None:
+    """Render an assistant answer, status notice, and returned source chips; message is a persisted response mapping; return None; the chat page script calls this helper for assistant turns."""
     answer_text = message.get("text", "")
     status = message.get("status")
     if status == "no_evidence":

@@ -12,6 +12,16 @@ class SearchRequest(BaseModel):
     @field_validator("query", mode="before")
     @classmethod
     def require_string_query(cls, value: object) -> object:
+        """Reject non-string input before Pydantic applies string validation.
+
+        Args:
+            value: Raw value supplied for the ``query`` field.
+
+        Returns:
+            The unchanged value when it is a string.
+
+        Called by: Pydantic while validating a ``SearchRequest`` instance.
+        """
         if not isinstance(value, str):
             raise ValueError("query must be a string")
         return value

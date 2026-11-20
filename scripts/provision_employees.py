@@ -1,3 +1,5 @@
+"""Validate employee seed CSVs and provision employee profiles to Firestore."""
+
 import argparse
 import base64
 import csv
@@ -43,12 +45,35 @@ LOGIN_COLUMNS = {
 }
 MAPPING_COLUMNS = {"employee_id", "department", "job_title"}
 def configured_path(variable_name: str, default_name: str) -> Path:
+    """Resolve a configured path, using the project root for relative values.
+
+        Parameters:
+            variable_name (`str`): the variable name input.
+            default_name (`str`): the default name input.
+
+        Returns:
+            The resulting value (`Path`).
+
+        Called by:
+            main.
+    """
     value = os.getenv(variable_name, default_name)
     path = Path(value).expanduser()
     return path if path.is_absolute() else PROJECT_ROOT / path
 
 
 def hash_password(password: str) -> str:
+    """Derive a salted scrypt password hash for an employee credential.
+
+        Parameters:
+            password (`str`): the password input.
+
+        Returns:
+            The resulting value (`str`).
+
+        Called by:
+            AuthAPITests.setUp, AuthAPITests.test_firestore_hr_context_preserves_the_graph_authorization_contract, AuthAPITests.test_invalid_firestore_profile_is_reported_as_unavailable, AuthService.__init__, ChatApiTests.test_policy_changed_chat_is_listed_locked_and_not_replayed, and other direct source references.
+    """
     salt = secrets.token_bytes(PASSWORD_SALT_BYTES)
     derived_key = hashlib.scrypt(
         password.encode("utf-8"),
@@ -67,6 +92,18 @@ def hash_password(password: str) -> str:
 
 
 def read_csv(path: Path, required_columns: set[str]) -> list[dict[str, str]]:
+    """Read CSV rows and reject missing files, headers, or required columns.
+
+        Parameters:
+            path (`Path`): the path input.
+            required_columns (`set[str]`): the required columns input.
+
+        Returns:
+            The resulting value (`list[dict[str, str]]`).
+
+        Called by:
+            build_employee_profiles, read_employee_roles.
+    """
     try:
         file_handle = path.open("r", encoding="utf-8-sig", newline="")
     except FileNotFoundError as exc:
@@ -98,6 +135,17 @@ def read_csv(path: Path, required_columns: set[str]) -> list[dict[str, str]]:
 
 
 def read_employee_roles(path: Path) -> dict[str, dict[str, list[str]]]:
+    """Aggregate department and job-title assignments from the mapping CSV.
+
+        Parameters:
+            path (`Path`): the path input.
+
+        Returns:
+            The resulting value (`dict[str, dict[str, list[str]]]`).
+
+        Called by:
+            build_employee_profiles.
+    """
     rows = read_csv(path, MAPPING_COLUMNS)
     roles: dict[str, dict[str, list[str]]] = {}
     for row_number, row in enumerate(rows, start=2):
@@ -122,6 +170,18 @@ def read_employee_roles(path: Path) -> dict[str, dict[str, list[str]]]:
 
 
 def parse_access_groups(value: str, row_number: int) -> list[str]:
+    """Normalize and validate access-group names from one login row.
+
+        Parameters:
+            value (`str`): the value input.
+            row_number (`int`): the row number input.
+
+        Returns:
+            The resulting value (`list[str]`).
+
+        Called by:
+            build_employee_profiles, build_profiles.
+    """
     names = [name.strip() for name in re.split(r"[,;|]", value) if name.strip()]
     if not names:
         raise ValueError(f"Login CSV, row {row_number}: access groups are required")
@@ -151,6 +211,19 @@ def credential_group(
     access_groups: list[str],
     row_number: int,
 ) -> str:
+    """Check that the password suffix names an assigned access group.
+
+        Parameters:
+            password (`str`): the password input.
+            access_groups (`list[str]`): the access groups input.
+            row_number (`int`): the row number input.
+
+        Returns:
+            The resulting value (`str`).
+
+        Called by:
+            build_employee_profiles.
+    """
     suffix = password.rsplit("_", 1)[-1].casefold()
     group = ACCESS_GROUPS.get(suffix)
     if group is None or group not in access_groups:
@@ -164,6 +237,18 @@ def build_employee_profiles(
     login_csv: Path,
     mapping_csv: Path,
 ) -> list[tuple[str, dict[str, Any]]]:
+    """Validate both seed CSVs and build Firestore employee profile documents.
+
+        Parameters:
+            login_csv (`Path`): the login csv input.
+            mapping_csv (`Path`): the mapping csv input.
+
+        Returns:
+            The resulting value (`list[tuple[str, dict[str, Any]]]`).
+
+        Called by:
+            main.
+    """
     employee_roles = read_employee_roles(mapping_csv)
     rows = read_csv(login_csv, LOGIN_COLUMNS)
     profiles: list[tuple[str, dict[str, Any]]] = []
@@ -216,6 +301,17 @@ def build_employee_profiles(
 
 
 def create_firestore_client() -> firestore.Client:
+    """Initialize or retrieve the named Firebase Admin app and Firestore client.
+
+        Parameters:
+            None.
+
+        Returns:
+            The resulting value (`firestore.Client`).
+
+        Called by:
+            FirestoreClientTests.test_application_default_credentials_are_used_without_a_key_file, create_app.lifespan, provision.
+    """
     project_id = os.getenv("FIREBASE_PROJECT_ID", "").strip()
     credential_value = os.getenv("FIREBASE_SERVICE_ACCOUNT_PATH", "").strip()
     if not project_id or not credential_value:
@@ -241,6 +337,17 @@ def create_firestore_client() -> firestore.Client:
 
 
 def provision(profiles: list[tuple[str, dict[str, Any]]]) -> int:
+    """Create all supplied employee documents in one Firestore batch without overwriting existing documents.
+
+        Parameters:
+            profiles (`list[tuple[str, dict[str, Any]]]`): the profiles input.
+
+        Returns:
+            The resulting value (`int`).
+
+        Called by:
+            HrCsvServiceTests.test_sqlite_permission_is_rechecked_immediately_before_csv_read, LocalProvisioningTests.test_profiles_share_document_access_repository_contract, SQLiteEmployeeRepositoryTests.test_all_profile_cannot_be_provisioned_without_hr_csv_access, SQLiteEmployeeRepositoryTests.test_all_profile_is_provisioned_with_hr_csv_access, SQLiteEmployeeRepositoryTests.test_authentication_returns_explicit_hr_csv_permission, and other direct source references.
+    """
     db = create_firestore_client()
     batch = db.batch()
     for employee_id, profile in profiles:
@@ -260,6 +367,17 @@ def provision(profiles: list[tuple[str, dict[str, Any]]]) -> int:
 
 
 def main() -> int:
+    """Run the command-line workflow and return its process exit status.
+
+        Parameters:
+            None.
+
+        Returns:
+            The resulting value (`int`).
+
+        Called by:
+            the `python scripts/provision_employees.py` CLI invocation (or direct module execution).
+    """
     parser = argparse.ArgumentParser(
         description="Import employee profiles from the configured CSV files into Firestore."
     )

@@ -59,7 +59,19 @@ class DocumentSearch(Protocol):
         query: str,
         n_results: int = DEFAULT_SEARCH_TOP_K,
     ) -> list[DocumentResult]:
-        """Return profile-authorized chunks for a document question."""
+        """Return profile-authorized chunks for a document question.
+
+        Args:
+            employee_id: Authenticated employee identifier.
+            query: Document question to search for.
+            n_results: Maximum number of chunks to return.
+
+        Returns:
+            Authorized matching chunks with citation metadata.
+
+        Called by: Application graph code using the service returned by
+            ``create_document_search_service``.
+        """
         ...
 
 
@@ -79,6 +91,16 @@ class RemoteSearchConfig:
 
     @classmethod
     def from_environment(cls) -> RemoteSearchConfig:
+        """Build a validated remote-service configuration from environment values.
+
+        Args:
+            None.
+
+        Returns:
+            Validated service URL, timeout, token, and optional IAM settings.
+
+        Called by: ``create_document_search_service`` when remote mode is chosen.
+        """
         service_url = os.getenv("VECTOR_SERVICE_URL", "").strip()
         secret = os.getenv("VECTOR_TOKEN_SECRET", "")
         issuer = os.getenv("VECTOR_TOKEN_ISSUER", "")
@@ -145,6 +167,17 @@ class LocalDocumentSearchAdapter:
         employee_repository: Any,
         collection: Any | None = None,
     ) -> None:
+        """Configure lazy local Chroma access and the trusted profile repository.
+
+        Args:
+            employee_repository: Repository used to resolve employee permissions.
+            collection: Optional existing collection for reuse or testing.
+
+        Returns:
+            None.
+
+        Called by: ``create_document_search_service`` in local mode.
+        """
         self._employee_repository = employee_repository
         self._collection = collection
         self._service: Any | None = None
@@ -155,6 +188,18 @@ class LocalDocumentSearchAdapter:
         query: str,
         n_results: int = DEFAULT_SEARCH_TOP_K,
     ) -> list[DocumentResult]:
+        """Search the local collection using current employee profile access.
+
+        Args:
+            employee_id: Authenticated employee identifier.
+            query: Document question to search for.
+            n_results: Maximum number of chunks to return.
+
+        Returns:
+            Authorized matching chunks with citation metadata.
+
+        Called by: Application graph code through the ``DocumentSearch`` API.
+        """
         if self._service is None:
             collection = self._collection
             if collection is None:
@@ -194,6 +239,17 @@ class RemoteDocumentSearchAdapter:
         employee_repository: Any,
         config: RemoteSearchConfig,
     ) -> None:
+        """Configure remote search with a trusted profile store and service settings.
+
+        Args:
+            employee_repository: Repository used to resolve employee permissions.
+            config: Validated remote service and token configuration.
+
+        Returns:
+            None.
+
+        Called by: ``create_document_search_service`` in remote mode.
+        """
         self._employee_repository = employee_repository
         self._config = config
         self._cached_identity: tuple[str, tuple[str, ...]] | None = None
@@ -206,6 +262,18 @@ class RemoteDocumentSearchAdapter:
         query: str,
         n_results: int = DEFAULT_SEARCH_TOP_K,
     ) -> list[DocumentResult]:
+        """Resolve profile permissions and request remote vector search.
+
+        Args:
+            employee_id: Authenticated employee identifier.
+            query: Document question to search for.
+            n_results: Maximum number of chunks to return.
+
+        Returns:
+            Authorized matching chunks with citation metadata.
+
+        Called by: Application graph code through the ``DocumentSearch`` API.
+        """
         groups = self._resolve_groups(employee_id)
         token = self._token_for(employee_id, groups)
         payload = json.dumps(
@@ -257,6 +325,16 @@ class RemoteDocumentSearchAdapter:
         return self._parse_results(response_body)
 
     def _resolve_groups(self, employee_id: str) -> tuple[str, ...]:
+        """Load and validate access groups for the authenticated employee.
+
+        Args:
+            employee_id: Authenticated employee identifier.
+
+        Returns:
+            Nonempty tuple of profile-derived group strings.
+
+        Called by: ``RemoteDocumentSearchAdapter.search`` before token creation.
+        """
         if not isinstance(employee_id, str) or not employee_id.strip():
             raise VectorSearchError("A verified employee identity is required.")
         try:
@@ -277,6 +355,17 @@ class RemoteDocumentSearchAdapter:
         return tuple(groups)
 
     def _token_for(self, employee_id: str, groups: tuple[str, ...]) -> str:
+        """Return a cached or newly signed short-lived access token.
+
+        Args:
+            employee_id: Authenticated employee identifier for the token subject.
+            groups: Validated access groups to include as token claims.
+
+        Returns:
+            An HS256 bearer token for the internal vector service.
+
+        Called by: ``RemoteDocumentSearchAdapter.search`` before the HTTP request.
+        """
         identity = (employee_id, groups)
         now = int(time.time())
         if (
@@ -313,6 +402,16 @@ class RemoteDocumentSearchAdapter:
 
     @staticmethod
     def _parse_results(response_body: bytes) -> list[DocumentResult]:
+        """Validate a remote JSON response and parse its document results.
+
+        Args:
+            response_body: Raw response bytes returned by the vector service.
+
+        Returns:
+            Validated document results with citation metadata.
+
+        Called by: ``RemoteDocumentSearchAdapter.search`` after the HTTP response.
+        """
         try:
             response = json.loads(response_body)
         except (UnicodeDecodeError, json.JSONDecodeError):
@@ -383,7 +482,19 @@ def create_document_search_service(
     collection: Any | None = None,
     mode: str | None = None,
 ) -> DocumentSearch:
-    """Select the local or HTTP adapter without opening Chroma prematurely."""
+    """Create the local or remote document-search adapter for the application.
+
+    Args:
+        employee_repository: Repository used to obtain employee access groups.
+        collection: Optional existing local collection; ignored for remote mode.
+        mode: Optional explicit ``local`` or ``remote`` selection; defaults to the
+            ``VECTOR_SEARCH_MODE`` environment value or local mode.
+
+    Returns:
+        A ``DocumentSearch`` implementation selected for the requested mode.
+
+    Called by: Application graph setup and vector client tests.
+    """
     selected_mode = (
         mode if mode is not None else os.getenv("VECTOR_SEARCH_MODE", "local")
     ).strip().casefold()

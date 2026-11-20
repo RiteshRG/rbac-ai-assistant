@@ -35,6 +35,7 @@ class AppSettings:
 
     @classmethod
     def from_environment(cls) -> AppSettings:
+        """Load, validate, and return API settings from environment variables and the project dotenv file; cls is the settings type; return AppSettings or raise SettingsError; app startup calls this when settings are not injected."""
         load_dotenv(PROJECT_ROOT / ".env")
         try:
             ttl = int(
@@ -82,6 +83,7 @@ class AppSettings:
         return settings
 
     def validate(self) -> None:
+        """Validate credential, token, and timeout settings; no explicit parameters; return None or raise SettingsError; from_environment and app startup call this."""
         credential_path_configured = str(self.firebase_service_account_path) != "."
         if self.firebase_use_application_default_credentials and credential_path_configured:
             raise SettingsError(

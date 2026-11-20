@@ -14,6 +14,7 @@ router = APIRouter()
 
 @router.post("/auth/login", response_model=LoginResponse)
 def login(body: LoginRequest, request: Request) -> LoginResponse:
+    """Authenticate credentials and issue an app token; body contains employee ID and password and request provides app services; return token and profile summary or raise HTTPException; FastAPI calls this route."""
     try:
         result = request.app.state.auth_service.login(body.employee_id, body.password)
     except InvalidCredentials:
@@ -55,6 +56,7 @@ def login(body: LoginRequest, request: Request) -> LoginResponse:
 
 @router.get("/v1/me", response_model=MeResponse)
 def me(profile: EmployeeProfile = Depends(require_employee)) -> MeResponse:
+    """Return the authenticated employee's current profile summary; profile is resolved by require_employee; return MeResponse; FastAPI calls this protected route."""
     return MeResponse(
         employee_id=profile.employee_id,
         display_name=profile.display_name,

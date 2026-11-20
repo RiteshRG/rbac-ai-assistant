@@ -1,3 +1,5 @@
+"""Unit tests for local and remote document-search client behavior."""
+
 from __future__ import annotations
 
 import json
@@ -25,10 +27,35 @@ AUDIENCE = "finsolve-vector"
 
 class FakeProfileRepository:
     def __init__(self, groups: list[str] | None = None, error: Exception | None = None):
+        """Initialize this test double with its configured input state.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+                groups (`list[str] | None`): the groups input.
+                error (`Exception | None`): the error input.
+
+            Returns:
+                None.
+
+            Called by:
+                AdaptiveRetrievalTests.test_groq_structured_answer_uses_json_schema_mode.FakeGroqModel.__init__, BackendError.__init__, TokenVerificationError.__init__, VectorAPIError.__init__.
+        """
         self.groups = groups
         self.error = error
 
     def get_access_groups(self, employee_id: str) -> list[str] | None:
+        """Provide the `get access groups` behavior of this test double to the code under test.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+                employee_id (`str`): the employee id input.
+
+            Returns:
+                The resulting value (`list[str] | None`).
+
+            Called by:
+                the code under test through this fake interface.
+        """
         if self.error is not None:
             raise self.error
         return self.groups
@@ -36,9 +63,35 @@ class FakeProfileRepository:
 
 class FakeCollection:
     def __init__(self) -> None:
+        """Initialize this test double with its configured input state.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None.
+
+            Called by:
+                AdaptiveRetrievalTests.test_groq_structured_answer_uses_json_schema_mode.FakeGroqModel.__init__, BackendError.__init__, TokenVerificationError.__init__, VectorAPIError.__init__.
+        """
         self.last_where: dict[str, object] | None = None
 
     def query(self, query_texts, n_results, where, include):
+        """Provide the `query` behavior of this test double to the code under test.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+                query_texts (`input`): the query texts input.
+                n_results (`input`): the n results input.
+                where (`input`): the where input.
+                include (`input`): the include input.
+
+            Returns:
+                The value produced by the operation described above.
+
+            Called by:
+                the code under test through this fake interface.
+        """
         self.last_where = where
         metadata = {
             "access_group": "Engineering",
@@ -56,20 +109,79 @@ class FakeCollection:
 
 class FakeHTTPResponse:
     def __init__(self, body: bytes, status: int = 200) -> None:
+        """Initialize this test double with its configured input state.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+                body (`bytes`): the body input.
+                status (`int`): the status input.
+
+            Returns:
+                None.
+
+            Called by:
+                AdaptiveRetrievalTests.test_groq_structured_answer_uses_json_schema_mode.FakeGroqModel.__init__, BackendError.__init__, TokenVerificationError.__init__, VectorAPIError.__init__.
+        """
         self._body = BytesIO(body)
         self.status = status
 
     def __enter__(self):
+        """Return this fake HTTP response when entering its context manager.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                The value produced by the operation described above.
+
+            Called by:
+                the code under test through this fake interface.
+        """
         return self
 
     def __exit__(self, *args):
+        """Complete the fake HTTP response context-manager exit without suppressing exceptions.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+                *args: additional positional inputs.
+
+            Returns:
+                The value produced by the operation described above.
+
+            Called by:
+                the code under test through this fake interface.
+        """
         return None
 
     def read(self, size: int = -1) -> bytes:
+        """Read the requested bytes from the in-memory fake HTTP body.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+                size (`int`): the size input.
+
+            Returns:
+                The resulting value (`bytes`).
+
+            Called by:
+                the code under test through this fake interface.
+        """
         return self._body.read(size)
 
 
 def valid_payload() -> bytes:
+    """Build a JSON byte payload representing a valid remote search response.
+
+        Parameters:
+            None.
+
+        Returns:
+            The resulting value (`bytes`).
+
+        Called by:
+            VectorSearchClientTests.test_client_does_not_log_tokens, VectorSearchClientTests.test_cloud_run_identity_token_is_separate_from_signed_vector_token.fake_urlopen, VectorSearchClientTests.test_json_results_convert_to_document_result.fake_urlopen, VectorSearchClientTests.test_profile_groups_sign_token_and_retry_searches_reuse_it.fake_urlopen.
+    """
     return json.dumps(
         {
             "results": [
@@ -89,6 +201,17 @@ def valid_payload() -> bytes:
 
 class VectorSearchClientTests(unittest.TestCase):
     def setUp(self) -> None:
+        """Prepare temporary files and fixture state for each test method.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None.
+
+            Called by:
+                the unittest framework before each test method in this class.
+        """
         self.environment = patch.dict(
             os.environ,
             {
@@ -105,19 +228,65 @@ class VectorSearchClientTests(unittest.TestCase):
         self.environment.start()
 
     def tearDown(self) -> None:
+        """Remove temporary files and release fixture state after each test method.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None.
+
+            Called by:
+                the unittest framework after each test method in this class.
+        """
         self.environment.stop()
 
     def make_remote_service(self, groups: list[str] | None = None):
+        """Create remote service for the supplied test inputs.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+                groups (`list[str] | None`): the groups input.
+
+            Returns:
+                The value produced by the operation described above.
+
+            Called by:
+                VectorSearchClientTests.test_client_does_not_log_tokens, VectorSearchClientTests.test_invalid_profile_and_malformed_response_raise, VectorSearchClientTests.test_json_results_convert_to_document_result, VectorSearchClientTests.test_profile_groups_sign_token_and_retry_searches_reuse_it, VectorSearchClientTests.test_remote_mode_does_not_open_chroma_and_local_mode_keeps_interface, and other direct source references.
+        """
         return create_document_search_service(
             employee_repository=FakeProfileRepository(groups or ["Engineering"]),
             mode="remote",
         )
 
     def test_json_results_convert_to_document_result(self) -> None:
+        """Verify json results convert to document result.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         service = self.make_remote_service()
         requests = []
 
         def fake_urlopen(request, timeout):
+            """Provide the fake urlopen behavior used by this workflow or test.
+
+                Parameters:
+                    request (`input`): the request input.
+                    timeout (`input`): the timeout input.
+
+                Returns:
+                    The value produced by the operation described above.
+
+                Called by:
+                    no direct source caller was found.
+            """
             requests.append((request, timeout))
             return FakeHTTPResponse(valid_payload())
 
@@ -145,10 +314,33 @@ class VectorSearchClientTests(unittest.TestCase):
         )
 
     def test_profile_groups_sign_token_and_retry_searches_reuse_it(self) -> None:
+        """Verify profile groups sign token and retry searches reuse it.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         service = self.make_remote_service(["Finance"])
         requests = []
 
         def fake_urlopen(request, timeout):
+            """Provide the fake urlopen behavior used by this workflow or test.
+
+                Parameters:
+                    request (`input`): the request input.
+                    timeout (`input`): the timeout input.
+
+                Returns:
+                    The value produced by the operation described above.
+
+                Called by:
+                    no direct source caller was found.
+            """
             requests.append(request)
             return FakeHTTPResponse(valid_payload())
 
@@ -172,6 +364,17 @@ class VectorSearchClientTests(unittest.TestCase):
         self.assertEqual(requests[0].full_url, "http://127.0.0.1:8001/internal/v1/search")
 
     def test_cloud_run_identity_token_is_separate_from_signed_vector_token(self) -> None:
+        """Verify cloud run identity token is separate from signed vector token.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         service = RemoteDocumentSearchAdapter(
             employee_repository=FakeProfileRepository(["All"]),
             config=RemoteSearchConfig(
@@ -187,6 +390,18 @@ class VectorSearchClientTests(unittest.TestCase):
         requests = []
 
         def fake_urlopen(request, timeout):
+            """Provide the fake urlopen behavior used by this workflow or test.
+
+                Parameters:
+                    request (`input`): the request input.
+                    timeout (`input`): the timeout input.
+
+                Returns:
+                    The value produced by the operation described above.
+
+                Called by:
+                    no direct source caller was found.
+            """
             requests.append(request)
             return FakeHTTPResponse(valid_payload())
 
@@ -215,6 +430,17 @@ class VectorSearchClientTests(unittest.TestCase):
         self.assertEqual(claims["access_groups"], ["All"])
 
     def test_timeout_connection_and_http_errors_raise_without_retry(self) -> None:
+        """Verify timeout connection and http errors raise without retry.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         errors = [
             TimeoutError("timed out"),
             URLError("connection failed"),
@@ -234,6 +460,18 @@ class VectorSearchClientTests(unittest.TestCase):
             calls = []
 
             def fail_once(request, timeout):
+                """Raise the configured HTTP error for one mocked request.
+
+                Parameters:
+                    request: the HTTP request supplied by the mocked client.
+                    timeout: the timeout supplied by the mocked client.
+
+                Returns:
+                    None; this callback raises the configured error instead.
+
+                Called by:
+                    the `urlopen` mock in this test's retry/error assertions.
+                """
                 calls.append(request)
                 raise error
 
@@ -245,6 +483,17 @@ class VectorSearchClientTests(unittest.TestCase):
             self.assertNotIn("secret response", str(raised.exception))
 
     def test_invalid_profile_and_malformed_response_raise(self) -> None:
+        """Verify invalid profile and malformed response raise.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         service = create_document_search_service(
             employee_repository=FakeProfileRepository(error=RuntimeError("private path")),
             mode="remote",
@@ -262,6 +511,17 @@ class VectorSearchClientTests(unittest.TestCase):
                 service.search("employee-1", "question")
 
     def test_remote_mode_does_not_open_chroma_and_local_mode_keeps_interface(self) -> None:
+        """Verify remote mode does not open chroma and local mode keeps interface.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         remote = self.make_remote_service()
         with patch(
             "vector_service.chroma_client.get_document_collection",
@@ -287,6 +547,17 @@ class VectorSearchClientTests(unittest.TestCase):
         )
 
     def test_client_does_not_log_tokens(self) -> None:
+        """Verify client does not log tokens.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         service = self.make_remote_service()
         with patch(
             "vector_search_client.urlopen",

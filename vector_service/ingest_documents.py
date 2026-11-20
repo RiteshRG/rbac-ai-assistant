@@ -12,7 +12,16 @@ DATA_ROOT = PROJECT_ROOT / "DS-RPC-01" / "data"
 
 
 def main() -> None:
-    """Load approved source documents into the project's persistent collection."""
+    """Load approved Markdown documents into the persistent Chroma collection.
+
+    Args:
+        None.
+
+    Returns:
+        None.
+
+    Called by: ``python -m vector_service.ingest_documents`` or direct CLI use.
+    """
     collection = get_document_collection()
     token_counter = ModelTokenCounter()
 

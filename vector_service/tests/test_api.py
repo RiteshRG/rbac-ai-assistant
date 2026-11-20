@@ -1,3 +1,5 @@
+"""Unit tests for authentication, validation, readiness, and search API behavior."""
+
 from __future__ import annotations
 
 import os
@@ -23,6 +25,20 @@ def make_token(
     audience: str = AUDIENCE,
     expiry: int | None = None,
 ) -> str:
+    """Create a signed token with overridable claims for API tests.
+
+    Args:
+        groups: Access-group claim, defaulting to Finance.
+        secret: Signing secret used for the test token.
+        issuer: Issuer claim.
+        audience: Audience claim.
+        expiry: Optional expiration timestamp; defaults to a short future expiry.
+
+    Returns:
+        An HS256-encoded JWT.
+
+    Called by: API test methods when constructing authorization headers.
+    """
     now = int(time.time())
     return jwt.encode(
         {
@@ -45,12 +61,34 @@ class FakeCollection:
         count_error: Exception | None = None,
         query_error: Exception | None = None,
     ) -> None:
+        """Configure fake records and optional operation failures.
+
+        Args:
+            records: Document, metadata, and distance tuples returned by search.
+            count_error: Optional exception raised by ``count``.
+            query_error: Optional exception raised by ``query``.
+
+        Returns:
+            None.
+
+        Called by: API test methods to provide a controlled collection.
+        """
         self.records = records or []
         self.count_error = count_error
         self.query_error = query_error
         self.last_where: dict[str, object] | None = None
 
     def count(self) -> int:
+        """Return the fake collection size or raise its configured failure.
+
+        Args:
+            None.
+
+        Returns:
+            The number of stored fake records.
+
+        Called by: The API readiness helper during FastAPI test requests.
+        """
         if self.count_error is not None:
             raise self.count_error
         return len(self.records)
@@ -62,6 +100,19 @@ class FakeCollection:
         where: dict[str, object],
         include: list[str],
     ) -> dict[str, list[list[object]]]:
+        """Filter fake records and return a Chroma-shaped search response.
+
+        Args:
+            query_texts: Search strings supplied to the collection.
+            n_results: Maximum records to include.
+            where: Access-group filter supplied by the search service.
+            include: Requested Chroma response fields.
+
+        Returns:
+            A nested document, metadata, and distance result mapping.
+
+        Called by: ``DocumentSearchService`` while handling API test requests.
+        """
         if self.query_error is not None:
             raise self.query_error
         self.last_where = where
@@ -80,6 +131,17 @@ class FakeCollection:
 
 
 def record(group: str, index: int = 0) -> tuple[str, dict[str, str | int], float]:
+    """Build one fake chunk record with citation metadata.
+
+    Args:
+        group: Access group assigned to the record.
+        index: Chunk index to store in its metadata.
+
+    Returns:
+        A document string, metadata mapping, and distance tuple.
+
+    Called by: API test methods when preparing fake collection data.
+    """
     return (
         f"{group} evidence",
         {
@@ -95,6 +157,16 @@ def record(group: str, index: int = 0) -> tuple[str, dict[str, str | int], float
 
 class VectorAPIAuthTests(unittest.TestCase):
     def setUp(self) -> None:
+        """Install test token settings for each isolated test case.
+
+        Args:
+            None.
+
+        Returns:
+            None.
+
+        Called by: The unittest runner before each test method.
+        """
         self.environment = patch.dict(
             os.environ,
             {
@@ -106,6 +178,16 @@ class VectorAPIAuthTests(unittest.TestCase):
         self.environment.start()
 
     def tearDown(self) -> None:
+        """Restore the environment patch after each test case.
+
+        Args:
+            None.
+
+        Returns:
+            None.
+
+        Called by: The unittest runner after each test method.
+        """
         self.environment.stop()
 
     def request(
@@ -114,6 +196,18 @@ class VectorAPIAuthTests(unittest.TestCase):
         body: dict[str, object] | None = None,
         token: str | None = None,
     ):
+        """Issue a search request while replacing Chroma with a fake.
+
+        Args:
+            collection: Fake collection returned to the API handler.
+            body: Optional JSON request body; defaults to a valid search.
+            token: Optional signed bearer token.
+
+        Returns:
+            The HTTP response produced by FastAPI's test client.
+
+        Called by: Test methods in ``VectorAPIAuthTests``.
+        """
         headers = {"Authorization": f"Bearer {token}"} if token else {}
         with patch(
             "vector_service.app.get_document_collection",
@@ -127,6 +221,16 @@ class VectorAPIAuthTests(unittest.TestCase):
                 )
 
     def test_valid_token_returns_exact_result_fields(self) -> None:
+        """Check valid authorization and the exact result response fields.
+
+        Args:
+            None.
+
+        Returns:
+            None.
+
+        Called by: The unittest test runner.
+        """
         response = self.request(
             FakeCollection([record("Finance")]),
             token=make_token(),
@@ -150,6 +254,16 @@ class VectorAPIAuthTests(unittest.TestCase):
     def test_missing_malformed_expired_signature_issuer_and_audience_tokens_are_401(
         self,
     ) -> None:
+        """Check invalid or missing token forms are rejected with HTTP 401.
+
+        Args:
+            None.
+
+        Returns:
+            None.
+
+        Called by: The unittest test runner.
+        """
         now = int(time.time())
         tokens = [
             None,
@@ -165,6 +279,16 @@ class VectorAPIAuthTests(unittest.TestCase):
                 self.assertEqual(response.status_code, 401)
 
     def test_invalid_group_claim_is_401_and_reason_is_logged_without_token(self) -> None:
+        """Check malformed group claims are denied without exposing token data.
+
+        Args:
+            None.
+
+        Returns:
+            None.
+
+        Called by: The unittest test runner.
+        """
         token = make_token(["Finance", "All"])
         with self.assertLogs("vector_service.app", level=logging.WARNING) as logs:
             response = self.request(
@@ -178,6 +302,16 @@ class VectorAPIAuthTests(unittest.TestCase):
         self.assertNotIn(token, response.text)
 
     def test_unknown_body_fields_and_invalid_values_are_422(self) -> None:
+        """Check unknown fields and invalid search values fail validation.
+
+        Args:
+            None.
+
+        Returns:
+            None.
+
+        Called by: The unittest test runner.
+        """
         cases = [
             {"query": "finance guide", "top_k": 5, "where": {}},
             {"query": "finance guide", "top_k": 5, "access_groups": ["All"]},
@@ -198,6 +332,16 @@ class VectorAPIAuthTests(unittest.TestCase):
                 self.assertNotIn("access_groups", response.text)
 
     def test_department_and_all_claims_are_filtered_server_side(self) -> None:
+        """Check department and all-access searches use server-side filters.
+
+        Args:
+            None.
+
+        Returns:
+            None.
+
+        Called by: The unittest test runner.
+        """
         records = [
             record("Engineering"),
             record("Finance"),
@@ -239,6 +383,16 @@ class VectorAPIAuthTests(unittest.TestCase):
     def test_empty_match_is_success_and_readiness_requires_nonempty_collection(
         self,
     ) -> None:
+        """Check empty matches succeed while empty collections are not ready.
+
+        Args:
+            None.
+
+        Returns:
+            None.
+
+        Called by: The unittest test runner.
+        """
         collection = FakeCollection([record("Finance")])
         response = self.request(
             collection,
@@ -264,6 +418,16 @@ class VectorAPIAuthTests(unittest.TestCase):
         self.assertEqual(search.status_code, 503)
 
     def test_unavailable_collection_and_query_return_503_without_paths(self) -> None:
+        """Check unavailable collection operations return safe HTTP 503 errors.
+
+        Args:
+            None.
+
+        Returns:
+            None.
+
+        Called by: The unittest test runner.
+        """
         unavailable = FakeCollection(count_error=RuntimeError("C:\\private\\store"))
         with patch(
             "vector_service.app.get_document_collection",
@@ -285,8 +449,31 @@ class VectorAPIAuthTests(unittest.TestCase):
     def test_unexpected_error_is_generic_and_only_three_routes_are_registered(
         self,
     ) -> None:
+        """Check malformed results become generic errors and routes stay limited.
+
+        Args:
+            None.
+
+        Returns:
+            None.
+
+        Called by: The unittest test runner.
+        """
         class MalformedCollection(FakeCollection):
             def query(self, query_texts, n_results, where, include):
+                """Return malformed data to exercise generic error handling.
+
+                Args:
+                    query_texts: Search strings passed by Chroma retrieval.
+                    n_results: Maximum result count requested.
+                    where: Access-group filter supplied by the service.
+                    include: Chroma fields requested by the service.
+
+                Returns:
+                    A deliberately incomplete Chroma-shaped response.
+
+                Called by: ``DocumentSearchService`` during this API test.
+                """
                 return {"documents": [["text"]], "metadatas": [[]], "distances": [[]]}
 
         token = make_token()
@@ -314,6 +501,16 @@ class VectorAPIAuthTests(unittest.TestCase):
         )
 
     def test_health_is_independent_of_collection_readiness(self) -> None:
+        """Check liveness does not open or depend on the Chroma collection.
+
+        Args:
+            None.
+
+        Returns:
+            None.
+
+        Called by: The unittest test runner.
+        """
         with patch(
             "vector_service.app.get_document_collection",
             side_effect=AssertionError("health must not open Chroma"),

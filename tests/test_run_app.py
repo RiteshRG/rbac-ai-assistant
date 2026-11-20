@@ -1,4 +1,7 @@
+"""Unit tests for local app process configuration and environment isolation."""
+
 from __future__ import annotations
+
 
 import os
 import unittest
@@ -9,6 +12,17 @@ from run_app import _local_vector_port, _streamlit_environment, _vector_environm
 
 class RunAppTests(unittest.TestCase):
     def test_remote_loopback_mode_selects_and_normalizes_local_vector_service(self) -> None:
+        """Verify remote loopback mode selects and normalizes local vector service.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         environment = {
             "VECTOR_SEARCH_MODE": "remote",
             "VECTOR_SERVICE_URL": "http://localhost:8002",
@@ -23,9 +37,31 @@ class RunAppTests(unittest.TestCase):
         self.assertEqual(environment["VECTOR_SERVICE_URL"], "http://127.0.0.1:8002")
 
     def test_local_mode_does_not_start_vector_api_process(self) -> None:
+        """Verify local mode does not start vector api process.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         self.assertIsNone(_local_vector_port({"VECTOR_SEARCH_MODE": "local"}))
 
     def test_remote_mode_reports_missing_setting_names(self) -> None:
+        """Verify remote mode reports missing setting names.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         with self.assertRaisesRegex(RuntimeError, "VECTOR_TOKEN_SECRET"):
             _local_vector_port(
                 {
@@ -35,6 +71,17 @@ class RunAppTests(unittest.TestCase):
             )
 
     def test_service_child_environments_do_not_receive_unneeded_secrets(self) -> None:
+        """Verify service child environments do not receive unneeded secrets.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         with patch.dict(
             os.environ,
             {

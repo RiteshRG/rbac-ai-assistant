@@ -20,6 +20,7 @@ def list_chats(
     limit: int = Query(default=CHAT_LIST_LIMIT, ge=CHAT_LIMIT_MIN, le=CHAT_LIST_LIMIT),
     profile: EmployeeProfile = Depends(require_employee),
 ) -> list[ChatSummaryResponse]:
+    """List the authenticated employee's chats; request provides app services, limit bounds the result count, and profile supplies trusted identity and policy; return chat summaries or raise HTTPException; FastAPI calls this route."""
     try:
         chats = request.app.state.chat_store.list_chats(
             profile.employee_id,
@@ -52,6 +53,7 @@ def get_messages(
     ),
     profile: EmployeeProfile = Depends(require_employee),
 ) -> list[ChatMessageResponse]:
+    """Load messages from an authenticated employee-owned chat; request provides app services, chat_id and limit constrain the read, and profile supplies trusted identity and policy; return message records or raise HTTPException; FastAPI calls this route."""
     try:
         messages = request.app.state.chat_store.get_messages(
             profile.employee_id,

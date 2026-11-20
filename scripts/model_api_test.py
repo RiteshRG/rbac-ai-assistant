@@ -13,12 +13,32 @@ from llm_config import create_chat_model
 
 
 def create_selected_model() -> BaseChatModel:
-    """Create the provider selected by LLM_PROVIDER in the local .env file."""
+    """Create selected model from the supplied configuration.
+
+        Parameters:
+            None.
+
+        Returns:
+            The resulting value (`BaseChatModel`).
+
+        Called by:
+            main.
+    """
     return create_chat_model(request_timeout=REQUEST_TIMEOUT_SECONDS)
 
 
 def selected_model_description() -> str:
-    """Return the configured provider and model name, never an API key."""
+    """Provide the selected model description behavior used by this workflow or test.
+
+        Parameters:
+            None.
+
+        Returns:
+            The resulting value (`str`).
+
+        Called by:
+            SelectedModelApiTestTests.test_selected_model_description_uses_active_provider_without_key, main.
+    """
     load_dotenv()
     provider = os.getenv("LLM_PROVIDER", "").strip().casefold()
     model_variable = {
@@ -34,7 +54,17 @@ def selected_model_description() -> str:
 
 
 def extract_text(response: Any) -> str:
-    """Get text from a LangChain chat response, including text content blocks."""
+    """Extract text from the supplied value.
+
+        Parameters:
+            response (`Any`): the response input.
+
+        Returns:
+            The resulting value (`str`).
+
+        Called by:
+            SelectedModelApiTestTests.test_extract_text_handles_plain_text, ask_model.
+    """
     content = getattr(response, "content", response)
     if isinstance(content, str):
         return content.strip()
@@ -49,7 +79,18 @@ def extract_text(response: Any) -> str:
 
 
 def ask_model(model: Any, question: str) -> str:
-    """Send only the question to the selected provider and return its response."""
+    """Send the supplied request and return the resulting model.
+
+        Parameters:
+            model (`Any`): the model input.
+            question (`str`): the question input.
+
+        Returns:
+            The resulting value (`str`).
+
+        Called by:
+            SelectedModelApiTestTests.test_ask_model_sends_question_and_extracts_response, SelectedModelApiTestTests.test_empty_response_is_an_explicit_failure, main.
+    """
     response = model.invoke(question)
     answer = extract_text(response)
     if not answer:
@@ -58,7 +99,17 @@ def ask_model(model: Any, question: str) -> str:
 
 
 def main() -> int:
-    """Prompt for one question and report whether the selected provider answered."""
+    """Run the command-line workflow and return its process exit status.
+
+        Parameters:
+            None.
+
+        Returns:
+            The resulting value (`int`).
+
+        Called by:
+            the `python scripts/model_api_test.py` CLI invocation (or direct module execution).
+    """
     question = input("Ask the selected model a question: ").strip()
     if not question:
         print("Question cannot be empty.")

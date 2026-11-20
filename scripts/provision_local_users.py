@@ -28,6 +28,18 @@ ACCESS_GROUPS = {
 
 
 def read_seed_csv(path: Path, required_columns: set[str]) -> list[dict[str, str]]:
+    """Read a private seed CSV and validate its header and required columns.
+
+        Parameters:
+            path (`Path`): the path input.
+            required_columns (`set[str]`): the required columns input.
+
+        Returns:
+            The resulting value (`list[dict[str, str]]`).
+
+        Called by:
+            _read_employee_assignments, build_profiles.
+    """
     try:
         with path.open("r", encoding="utf-8-sig", newline="") as source:
             reader = csv.DictReader(source)
@@ -54,6 +66,18 @@ def read_seed_csv(path: Path, required_columns: set[str]) -> list[dict[str, str]
 
 
 def parse_access_groups(value: str, row_number: int) -> tuple[str, ...]:
+    """Normalize and validate the access groups from a local login seed row.
+
+        Parameters:
+            value (`str`): the value input.
+            row_number (`int`): the row number input.
+
+        Returns:
+            The resulting value (`tuple[str, ...]`).
+
+        Called by:
+            build_employee_profiles, build_profiles.
+    """
     groups: list[str] = []
     for raw_group in re.split(r"[,;|]", value):
         name = raw_group.strip()
@@ -74,6 +98,17 @@ def parse_access_groups(value: str, row_number: int) -> tuple[str, ...]:
 
 
 def _read_employee_assignments(path: Path) -> dict[str, tuple[tuple[str, ...], tuple[str, ...]]]:
+    """Aggregate department and job-title assignments from the mapping seed CSV.
+
+        Parameters:
+            path (`Path`): the path input.
+
+        Returns:
+            The resulting value (`dict[str, tuple[tuple[str, ...], tuple[str, ...]]]`).
+
+        Called by:
+            build_profiles.
+    """
     rows = read_seed_csv(path, {"employee_id", "department", "job_title"})
     assignments: dict[str, tuple[list[str], list[str]]] = {}
     for row_number, row in enumerate(rows, start=2):
@@ -96,7 +131,18 @@ def _read_employee_assignments(path: Path) -> dict[str, tuple[tuple[str, ...], t
 
 
 def build_profiles(login_csv: Path, mapping_csv: Path) -> list[ProvisionedEmployee]:
-    """Validate both private seed files and explicitly map HR access groups."""
+    """Validate both private seed files and explicitly map HR access groups.
+
+        Parameters:
+            login_csv (`Path`): the login csv input.
+            mapping_csv (`Path`): the mapping csv input.
+
+        Returns:
+            The resulting value (`list[ProvisionedEmployee]`).
+
+        Called by:
+            LocalProvisioningTests.test_profiles_share_document_access_repository_contract, LocalProvisioningTests.test_provisioning_maps_hr_and_all_access_groups, main.
+    """
     assignments = _read_employee_assignments(mapping_csv)
     rows = read_seed_csv(
         login_csv,
@@ -153,6 +199,17 @@ def build_profiles(login_csv: Path, mapping_csv: Path) -> list[ProvisionedEmploy
 
 
 def main() -> int:
+    """Run the command-line workflow and return its process exit status.
+
+        Parameters:
+            None.
+
+        Returns:
+            The resulting value (`int`).
+
+        Called by:
+            the `python scripts/provision_local_users.py` CLI invocation (or direct module execution).
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--login-csv", type=Path, default=DEFAULT_LOGIN_CSV)
     parser.add_argument("--mapping-csv", type=Path, default=DEFAULT_MAPPING_CSV)

@@ -1,0 +1,17 @@
+{
+  "run_id": "20261119T150546Z-b9966d4c",
+  "timestamp": "2026-11-19T15:05:47.677518+00:00",
+  "git_commit_sha": "1a5dca8e2f07ae0112cd683d71aae60556080406",
+  "dataset_version": "1",
+  "dataset_sha256": "e0362666332fac07fa773e46444c0856f5dc228340991c53b6394a5d49df7fd7",
+  "answer_model": "from app LLM_PROVIDER/GROQ_MODEL or GEMINI_MODEL",
+  "judge_provider": "groq",
+  "judge_model": "EVAL_JUDGE_MODEL",
+  "groq_tpm_budget": 6000,
+  "groq_output_token_reserve": 256,
+  "groq_max_retries": 5,
+  "groq_max_backoff_seconds": 30.0,
+  "temperature": 0.1,
+  "ragas_version": "Ragas scoring skipped",
+  "untouched_check": "PASS"
+}

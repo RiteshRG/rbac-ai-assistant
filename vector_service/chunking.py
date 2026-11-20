@@ -50,6 +50,16 @@ class ModelTokenCounter:
     """Count tokens with Chroma's tokenizer without its embedding-time truncation."""
 
     def __init__(self) -> None:
+        """Load the tokenizer used to count complete embedding inputs.
+
+        Args:
+            None.
+
+        Returns:
+            None.
+
+        Called by: ``vector_service.ingest_documents.main`` before ingestion.
+        """
         # Clone Chroma's tokenizer so counting is accurate beyond its 256-token limit.
         from chromadb.utils.embedding_functions import ONNXMiniLM_L6_V2
         from tokenizers import Tokenizer
@@ -62,12 +72,32 @@ class ModelTokenCounter:
         self._tokenizer.no_padding()
 
     def __call__(self, text: str) -> int:
-        """Return the exact model-token count for text, including special tokens."""
+        """Count model tokens, including special tokens, in the supplied text.
+
+        Args:
+            text: Text to encode with the embedding model's tokenizer.
+
+        Returns:
+            The number of encoded token IDs.
+
+        Called by: Chunking helpers through the callable passed to
+            ``make_document_chunks``.
+        """
         return len(self._tokenizer.encode(text).ids)
 
 
 def _document_title(markdown: str, file_path: Path) -> str:
-    """Read the first H1 as the title, or fall back to a readable filename."""
+    """Find the first H1 title or derive a readable title from the filename.
+
+    Args:
+        markdown: Source Markdown text.
+        file_path: Path used for the filename fallback.
+
+    Returns:
+        The trimmed H1 text, or a title-cased filename stem.
+
+    Called by: ``make_document_chunks``.
+    """
     for line in markdown.splitlines():
         match = _HEADING_PATTERN.match(line)
         if match and len(match.group(1)) == 1:
@@ -76,13 +106,32 @@ def _document_title(markdown: str, file_path: Path) -> str:
 
 
 def _parse_sections(markdown: str, document_title: str) -> list[_Section]:
-    """Group source lines by Markdown headings and dashed plain-text headings."""
+    """Group Markdown body text by its heading path.
+
+    Args:
+        markdown: Source Markdown text.
+        document_title: Document title used as the root of each section path.
+
+    Returns:
+        Ordered nonempty sections with their heading paths and body text.
+
+    Called by: ``make_document_chunks``.
+    """
     headings: list[tuple[int, str]] = [(1, document_title)]
     sections: list[_Section] = []
     body_lines: list[str] = []
 
     def save_current_section() -> None:
-        """Store the current body under the active heading path."""
+        """Append the current nonempty body under its active heading path.
+
+        Args:
+            None.
+
+        Returns:
+            None.
+
+        Called by: ``_parse_sections`` when a heading changes or parsing ends.
+        """
         body = "\n".join(body_lines).strip()
         if body:
             heading_path = " > ".join(title for _, title in headings)
@@ -132,7 +181,16 @@ def _parse_sections(markdown: str, document_title: str) -> list[_Section]:
 
 
 def _split_into_blocks(section_body: str) -> list[str]:
-    """Separate paragraphs while keeping fenced code blocks as single blocks."""
+    """Separate paragraphs while preserving fenced code as a single block.
+
+    Args:
+        section_body: Text body of one parsed section.
+
+    Returns:
+        Nonempty paragraph or fenced-code blocks in source order.
+
+    Called by: ``_chunk_section``.
+    """
     blocks: list[str] = []
     current_lines: list[str] = []
     inside_fence = False
@@ -154,7 +212,18 @@ def _split_into_blocks(section_body: str) -> list[str]:
 
 
 def _split_long_text(text: str, max_tokens: int, count_tokens: Callable[[str], int]) -> list[str]:
-    """Split an oversized paragraph at sentence boundaries, then word boundaries."""
+    """Split oversized text first at sentence and then word boundaries.
+
+    Args:
+        text: Text to split.
+        max_tokens: Maximum token count for each returned piece.
+        count_tokens: Callable that counts tokens in a text string.
+
+    Returns:
+        Ordered text pieces that fit the token budget.
+
+    Called by: ``_split_table`` and ``_split_block``.
+    """
     pieces: list[str] = []
     current = ""
 
@@ -193,7 +262,18 @@ def _split_long_text(text: str, max_tokens: int, count_tokens: Callable[[str], i
 
 
 def _split_table(block: str, max_tokens: int, count_tokens: Callable[[str], int]) -> list[str]:
-    """Split long Markdown tables by rows, repeating their header in each piece."""
+    """Split long Markdown tables by rows and repeat their header.
+
+    Args:
+        block: Markdown table text.
+        max_tokens: Maximum token count for each returned table piece.
+        count_tokens: Callable that counts tokens in a text string.
+
+    Returns:
+        Ordered table pieces, or general text pieces for non-table input.
+
+    Called by: ``_split_block``.
+    """
     lines = block.splitlines()
     if len(lines) < 3 or not all(line.lstrip().startswith("|") for line in lines):
         return _split_long_text(block, max_tokens, count_tokens)
@@ -227,7 +307,19 @@ def _split_table(block: str, max_tokens: int, count_tokens: Callable[[str], int]
 
 
 def _split_block(block: str, max_tokens: int, count_tokens: Callable[[str], int]) -> list[str]:
-    """Keep a structural block intact when possible, otherwise split it safely."""
+    """Preserve a block when possible and otherwise split at safe boundaries.
+
+    Args:
+        block: Paragraph, table, list, or fenced block to split.
+        max_tokens: Maximum token count for each returned piece.
+        count_tokens: Callable that counts tokens in a text string.
+
+    Returns:
+        Ordered pieces within the token budget while preserving structure where
+        possible.
+
+    Called by: ``_chunk_section``.
+    """
     if count_tokens(block) <= max_tokens:
         return [block]
 
@@ -255,7 +347,18 @@ def _split_block(block: str, max_tokens: int, count_tokens: Callable[[str], int]
 
 
 def _last_tokens(text: str, token_count: int, count_tokens: Callable[[str], int]) -> str:
-    """Select a word-boundary suffix close to the requested overlap token count."""
+    """Select a word-boundary suffix near the requested overlap size.
+
+    Args:
+        text: Source text to take the suffix from.
+        token_count: Desired maximum overlap size in tokens.
+        count_tokens: Callable that counts tokens in a text string.
+
+    Returns:
+        The trailing words selected for overlap.
+
+    Called by: ``_chunk_section`` when adding non-table chunk overlap.
+    """
     suffix: list[str] = []
     for word in reversed(text.split()):
         candidate = " ".join([word, *suffix])
@@ -270,7 +373,18 @@ def _chunk_section(
     document_title: str,
     count_tokens: Callable[[str], int],
 ) -> list[str]:
-    """Build bounded, heading-prefixed text chunks from one coherent section."""
+    """Build bounded, heading-prefixed chunks from one coherent section.
+
+    Args:
+        section: Parsed section to convert to chunks.
+        document_title: Document title included in each chunk prefix.
+        count_tokens: Callable that counts tokens in a text string.
+
+    Returns:
+        Ordered chunks that fit the chunk and embedding token limits.
+
+    Called by: ``make_document_chunks`` for each parsed section.
+    """
     heading_prefix = f"Document: {document_title}\nSection: {section.heading_path}\n\n"
     content_budget = TARGET_CHUNK_TOKENS - count_tokens(heading_prefix)
     if content_budget < 1:
@@ -280,7 +394,17 @@ def _chunk_section(
     current_lines: list[str] = []
 
     def save_current_chunk() -> None:
-        """Store the accumulated source blocks before adding another block."""
+        """Append the accumulated nonempty text as a section body chunk.
+
+        Args:
+            None.
+
+        Returns:
+            None.
+
+        Called by: ``_chunk_section`` when the token budget is reached and at
+            the end of the section.
+        """
         body = "\n\n".join(current_lines).strip()
         if body:
             body_chunks.append(body)
@@ -334,6 +458,18 @@ def make_document_chunks(
     compatible with the embedding model. Output is an ordered list of bounded,
     heading-aware chunks. The split happens at headings first, then paragraphs,
     list/table rows, sentences, and words as a last resort.
+
+    Args:
+        markdown: Markdown source text to parse.
+        source_path: Path to the source file, used for access group and citation
+            metadata.
+        data_root: Root directory under which approved department folders reside.
+        count_tokens: Callable compatible with the collection's embedding model.
+
+    Returns:
+        Ordered chunks containing text and required retrieval metadata.
+
+    Called by: ``vector_service.ingestion.ingest_one_document``.
     """
     try:
         relative_source = source_path.resolve().relative_to(data_root.resolve())

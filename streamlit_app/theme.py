@@ -267,11 +267,12 @@ input::placeholder, textarea::placeholder { color: var(--text-2) !important; opa
 
 
 def apply_theme() -> None:
-    """Inject the shared CSS. Call at the top of every page."""
+    """Inject shared page CSS; no explicit parameters; return None; each Streamlit page script calls this at render start."""
     st.markdown(_CSS, unsafe_allow_html=True)
 
 
 def brand(name: str = PRODUCT_NAME) -> None:
+    """Render the product mark and name; name is the displayed product label; return None; public_nav and the chat page call this helper."""
     st.markdown(
         f'<div class="fb-brand"><span class="fb-brand-mark"></span>{escape(name)}</div>',
         unsafe_allow_html=True,
@@ -279,7 +280,7 @@ def brand(name: str = PRODUCT_NAME) -> None:
 
 
 def hero(eyebrow: str, title_html: str, subtitle: str) -> None:
-    """title_html may wrap one phrase in <span class="accent">...</span>."""
+    """Render the landing-page hero; eyebrow, title_html, and subtitle provide its text, with optional accent markup in the title; return None; the landing page calls this helper."""
     st.markdown(
         f'<div class="fb-hero"><div class="fb-eyebrow">{eyebrow}</div>'
         f"<h1>{title_html}</h1><p>{subtitle}</p></div>",
@@ -288,6 +289,7 @@ def hero(eyebrow: str, title_html: str, subtitle: str) -> None:
 
 
 def section_title(title: str, subtitle: str = "") -> None:
+    """Render a section heading and optional subtitle; title and subtitle provide display text; return None; the landing page calls this helper."""
     st.markdown(
         f'<div class="fb-section-title">{escape(title)}</div>',
         unsafe_allow_html=True,
@@ -300,7 +302,7 @@ def section_title(title: str, subtitle: str = "") -> None:
 
 
 def feature_card(icon: str, title: str, body: str) -> None:
-    """icon is a Material Symbols name, for example 'description' or 'lock'."""
+    """Render a feature card; icon is a Material Symbols name and title/body provide its text; return None; the landing page calls this helper."""
     st.markdown(
         f'<div class="fb-card"><div class="fb-icon"><span class="material-symbols-rounded">{escape(icon)}</span></div>'
         f"<h4>{escape(title)}</h4><p>{escape(body)}</p></div>",
@@ -309,6 +311,7 @@ def feature_card(icon: str, title: str, body: str) -> None:
 
 
 def step(number: int, title: str, body: str) -> None:
+    """Render one numbered process card; number, title, and body define its display; return None; the landing page calls this helper."""
     st.markdown(
         f'<div class="fb-card"><div class="fb-step-num">{number}</div><h4>{escape(title)}</h4><p>{escape(body)}</p></div>',
         unsafe_allow_html=True,
@@ -316,7 +319,7 @@ def step(number: int, title: str, body: str) -> None:
 
 
 def banner(kind: str, text: str) -> None:
-    """kind: 'error' | 'warn' | 'info'. Text must be plain, safe text."""
+    """Render a safely escaped status banner; kind selects error, warn, or info and text is plain display text; return None; page scripts may call this public theme helper."""
     safe_kind = kind if kind in {"error", "warn", "info"} else "error"
     st.markdown(
         f'<div class="fb-banner {safe_kind}">{escape(text)}</div>',
@@ -325,6 +328,7 @@ def banner(kind: str, text: str) -> None:
 
 
 def chips(labels: list[str]) -> None:
+    """Render escaped pill labels; labels contains the display strings; return None; the chat page calls this helper for citations."""
     rendered = "".join(
         f'<span class="fb-chip">{escape(label)}</span>' for label in labels
     )
@@ -332,7 +336,7 @@ def chips(labels: list[str]) -> None:
 
 
 def footer(product: str = PRODUCT_NAME) -> None:
-    """Footer text only. Privacy/Terms links are added with st.page_link by the caller."""
+    """Render footer text only; product is the displayed product name; return None; public_footer calls this helper and adds navigation links."""
     st.markdown(
         f'<div class="fb-footer">&copy; {escape(product)}. Demonstration project.</div>',
         unsafe_allow_html=True,
@@ -340,6 +344,7 @@ def footer(product: str = PRODUCT_NAME) -> None:
 
 
 def public_nav() -> None:
+    """Render the shared public-page navigation; no explicit parameters; return None; the landing, login, privacy, and terms page scripts call this helper."""
     columns = st.columns([2.7, .8, 1.35, .95, .7, .7, .8])
     with columns[0]:
         brand()
@@ -359,6 +364,7 @@ def public_nav() -> None:
 
 
 def public_footer() -> None:
+    """Render the shared public footer and legal links; no explicit parameters; return None; the landing, login, privacy, and terms page scripts call this helper."""
     columns = st.columns([3, 1, 1])
     with columns[0]:
         footer()

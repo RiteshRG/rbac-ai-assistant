@@ -13,6 +13,17 @@ from llm_config import create_chat_model  # noqa: E402
 
 
 def load_questions(path: Path) -> list[tuple[int, str, str]]:
+    """Parse numbered evaluation questions and expected answers from the evaluation text file.
+
+        Parameters:
+            path (`Path`): the path input.
+
+        Returns:
+            The resulting value (`list[tuple[int, str, str]]`).
+
+        Called by:
+            main.
+    """
     questions: list[tuple[int, str, str]] = []
     current_number: int | None = None
     current_question: str | None = None
@@ -39,6 +50,17 @@ def load_questions(path: Path) -> list[tuple[int, str, str]]:
 
 
 def main() -> int:
+    """Run the command-line workflow and return its process exit status.
+
+        Parameters:
+            None.
+
+        Returns:
+            The resulting value (`int`).
+
+        Called by:
+            the `python tests/run_eval.py` CLI invocation (or direct module execution).
+    """
     questions = load_questions(Path(__file__).with_name("eval_questions.txt"))
     graph = create_hr_csv_graph(llm=create_chat_model())
     output_blocks: list[str] = []

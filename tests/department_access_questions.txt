@@ -37,9 +37,6 @@ Q8 [Finance]: What was Days Sales Outstanding, and what does the report say it i
 EXPECTED (approx): DSO was 45 days versus a 30-day industry benchmark; the report says receivables collection could improve.
 SOURCE: DS-RPC-01/data/finance/financial_summary.md
 
-Q9 [Finance]: How much were vendor services, and which categories made up most of that expense?
-EXPECTED (approx): Vendor services totaled $30M: marketing-related expenses were 40%, training/education 30%, software subscriptions 25%, and miscellaneous expenses 5%.
-SOURCE: DS-RPC-01/data/finance/financial_summary.md
 
 Q10 [Finance]: What was 2024 cash flow from operations, and what affected liquidity?
 EXPECTED (approx): Operating cash flow was positive at $50M, up 20%; delayed vendor payment cycles slightly affected liquidity in the second half.

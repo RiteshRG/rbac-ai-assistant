@@ -132,11 +132,12 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
 
 
 def apply_theme() -> None:
-    """Inject the shared CSS. Call at the top of every page."""
+    """Inject the shared CSS; no explicit parameters; return None; no direct project caller exists because this file is a skill asset, and it is a public helper for Streamlit page scripts."""
     st.markdown(_CSS, unsafe_allow_html=True)
 
 
 def brand(name: str = PRODUCT_NAME) -> None:
+    """Render the product mark and name; name is the displayed label; return None; no direct project caller exists because this file is a skill asset; it is a public theme helper."""
     st.markdown(
         f'<div class="fb-brand"><span class="fb-brand-mark"></span>{name}</div>',
         unsafe_allow_html=True,
@@ -144,7 +145,7 @@ def brand(name: str = PRODUCT_NAME) -> None:
 
 
 def hero(eyebrow: str, title_html: str, subtitle: str) -> None:
-    """title_html may wrap one phrase in <span class="accent">...</span>."""
+    """Render a hero block; eyebrow, title_html, and subtitle provide its content, with optional accent markup in the title; return None; no direct project caller exists because this file is a skill asset; it is a public theme helper."""
     st.markdown(
         f'<div class="fb-hero"><div class="fb-eyebrow">{eyebrow}</div>'
         f"<h1>{title_html}</h1><p>{subtitle}</p></div>",
@@ -153,13 +154,14 @@ def hero(eyebrow: str, title_html: str, subtitle: str) -> None:
 
 
 def section_title(title: str, subtitle: str = "") -> None:
+    """Render a section heading and optional subtitle; title and subtitle provide display text; return None; no direct project caller exists because this file is a skill asset; it is a public theme helper."""
     st.markdown(f'<div class="fb-section-title">{title}</div>', unsafe_allow_html=True)
     if subtitle:
         st.markdown(f'<div class="fb-section-sub">{subtitle}</div>', unsafe_allow_html=True)
 
 
 def feature_card(icon: str, title: str, body: str) -> None:
-    """icon is a Material Symbols name, for example 'description' or 'lock'."""
+    """Render a feature card; icon is a Material Symbols name and title/body provide its text; return None; no direct project caller exists because this file is a skill asset; it is a public theme helper."""
     st.markdown(
         f'<div class="fb-card"><div class="fb-icon"><span class="material-symbols-rounded">{icon}</span></div>'
         f"<h4>{title}</h4><p>{body}</p></div>",
@@ -168,6 +170,7 @@ def feature_card(icon: str, title: str, body: str) -> None:
 
 
 def step(number: int, title: str, body: str) -> None:
+    """Render one numbered process card; number, title, and body define its display; return None; no direct project caller exists because this file is a skill asset; it is a public theme helper."""
     st.markdown(
         f'<div class="fb-card"><div class="fb-step-num">{number}</div><h4>{title}</h4><p>{body}</p></div>',
         unsafe_allow_html=True,
@@ -175,17 +178,18 @@ def step(number: int, title: str, body: str) -> None:
 
 
 def banner(kind: str, text: str) -> None:
-    """kind: 'error' | 'warn' | 'info'. Text must be plain, safe text."""
+    """Render a safely escaped status banner; kind selects error, warn, or info and text is plain display text; return None; no direct project caller exists because this file is a skill asset; it is a public theme helper."""
     st.markdown(f'<div class="fb-banner {kind}">{text}</div>', unsafe_allow_html=True)
 
 
 def chips(labels: list[str]) -> None:
+    """Render escaped pill labels; labels contains the display strings; return None; no direct project caller exists because this file is a skill asset; it is a public theme helper."""
     html = "".join(f'<span class="fb-chip">{l}</span>' for l in labels)
     st.markdown(html, unsafe_allow_html=True)
 
 
 def footer(product: str = PRODUCT_NAME) -> None:
-    """Footer text only. Privacy/Terms links are added with st.page_link by the caller."""
+    """Render footer text only; product is the displayed product name; return None; no direct project caller exists because this file is a skill asset; public_footer calls this helper when used."""
     st.markdown(
         f'<div class="fb-footer">&copy; {product}. Demonstration project.</div>',
         unsafe_allow_html=True,

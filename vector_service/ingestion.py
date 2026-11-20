@@ -33,6 +33,14 @@ def discover_markdown_files(data_root: Path) -> list[Path]:
 
     The HR folder is deliberately not traversed, so its CSV and other files are
     never opened by this document-vector ingestion path.
+
+    Args:
+        data_root: Root containing approved department document folders.
+
+    Returns:
+        Sorted Markdown paths from each approved department folder.
+
+    Called by: ``ingest_all_documents``.
     """
     files: list[Path] = []
     for department in APPROVED_DEPARTMENTS:
@@ -47,7 +55,17 @@ def discover_markdown_files(data_root: Path) -> list[Path]:
 
 
 def _stable_chunk_id(source_file: str, chunk: DocumentChunk) -> str:
-    """Make a stable ID from source path, chunk position, and embedded text."""
+    """Derive a deterministic ID from a source path and chunk contents.
+
+    Args:
+        source_file: Dataset-relative source path.
+        chunk: Chunk whose index and text identify the record.
+
+    Returns:
+        A SHA-256 hexadecimal ID.
+
+    Called by: ``ingest_one_document`` for each generated chunk.
+    """
     identity = f"{source_file}\0{chunk.metadata['chunk_index']}\0{chunk.text}"
     return hashlib.sha256(identity.encode("utf-8")).hexdigest()
 
@@ -56,7 +74,17 @@ def _batches(
     items: list[tuple[str, DocumentChunk]],
     batch_size: int,
 ) -> Iterable[list[tuple[str, DocumentChunk]]]:
-    """Yield fixed-size groups so each Chroma upsert stays bounded."""
+    """Yield consecutive fixed-size groups of chunk records.
+
+    Args:
+        items: Ordered chunk ID and content records.
+        batch_size: Maximum number of records in each yielded group.
+
+    Returns:
+        An iterable of bounded record batches.
+
+    Called by: ``ingest_one_document`` to bound Chroma upserts.
+    """
     for start in range(0, len(items), batch_size):
         yield items[start : start + batch_size]
 
@@ -74,6 +102,18 @@ def ingest_one_document(
     the collection's embedding tokenizer. The return value is the current chunk
     count. Upserts finish before stale IDs are deleted, so failures are surfaced
     without discarding the previous indexed version of the source.
+
+    Args:
+        source_path: Approved Markdown file to ingest.
+        data_root: Root directory containing approved department folders.
+        collection: Chroma collection to update.
+        count_tokens: Callable that counts tokens using the embedding tokenizer.
+        batch_size: Maximum chunks per upsert operation.
+
+    Returns:
+        The number of chunks currently indexed for this source.
+
+    Called by: ``ingest_all_documents`` and direct ingestion API callers.
     """
     if batch_size < 1:
         raise ValueError("batch_size must be greater than zero")
@@ -124,7 +164,19 @@ def ingest_all_documents(
     count_tokens: Callable[[str], int],
     batch_size: int = UPSERT_BATCH_SIZE,
 ) -> IngestionSummary:
-    """Ingest approved Markdown files and return successful source/chunk totals."""
+    """Ingest approved Markdown files and return source and chunk totals.
+
+    Args:
+        data_root: Root directory containing approved department folders.
+        collection: Chroma collection to update.
+        count_tokens: Callable that counts tokens using the embedding tokenizer.
+        batch_size: Maximum chunks per upsert operation.
+
+    Returns:
+        Counts of successfully processed Markdown files and chunks.
+
+    Called by: ``vector_service.ingest_documents.main``.
+    """
     files = discover_markdown_files(data_root)
     total_chunks = 0
 

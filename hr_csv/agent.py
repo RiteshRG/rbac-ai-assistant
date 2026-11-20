@@ -136,6 +136,7 @@ def create_hr_csv_graph(
 
 def validate_request_node(state: HrCsvGraphState) -> HrCsvGraphState:
     """Reject blank questions and mutation requests before any API or file access."""
+    print("[HR] Validating request.")
     query = state["query"].strip()
     if not query:
         state["status"] = "rejected"
@@ -147,6 +148,7 @@ def validate_request_node(state: HrCsvGraphState) -> HrCsvGraphState:
     else:
         state["query"] = query
         state["status"] = "pending"
+    print(f"[HR] Request validation complete: status={state['status']}.")
     return state
 
 
@@ -157,6 +159,7 @@ def route_if_request_is_valid(state: HrCsvGraphState) -> str:
 
 def authorize_hr_access_node(state: HrCsvGraphState) -> HrCsvGraphState:
     """Require the dedicated permission before planning or CSV access."""
+    print("[HR] Checking CSV authorization.")
     context = state.get("authorization_context")
     selected_group = state["access_group"].strip().casefold()
     if context is None and selected_group in {"hr", "all"}:
@@ -169,6 +172,7 @@ def authorize_hr_access_node(state: HrCsvGraphState) -> HrCsvGraphState:
         )
         state["authorization_context"] = context
     if not isinstance(context, EmployeeAuthorizationContext) or not context.has_hr_csv_permission:
+        print("[HR] CSV authorization denied.")
         state["status"] = "denied"
         state["answer"] = (
             "Access denied: this profile does not have the dedicated HR CSV permission."
@@ -176,6 +180,7 @@ def authorize_hr_access_node(state: HrCsvGraphState) -> HrCsvGraphState:
         logger.info("hr_csv_authorization outcome=denied")
         return state
     state["status"] = "authorized"
+    print("[HR] CSV authorization granted.")
     logger.info("hr_csv_authorization outcome=allowed")
     return state
 
@@ -190,6 +195,7 @@ def plan_csv_operation_node(
     llm: Any,
 ) -> HrCsvGraphState:
     """Ask the selected model for a typed operation plan, never executable code."""
+    print("[HR] Planning read-only CSV operation.")
     prompt = [
         SystemMessage(content=CSV_PLANNER_SYSTEM_PROMPT),
         HumanMessage(
@@ -234,11 +240,14 @@ def plan_csv_operation_node(
         plan = parse_operation_plan(raw_plan)
         state["plan"] = plan
         state["status"] = "planned"
+        print("[HR] CSV operation plan created.")
     except CsvOperationError as exc:
+        print("[HR] CSV operation planning failed validation.")
         state["status"] = "error"
         state["error"] = str(exc)
         state["answer"] = str(exc)
     except (ValidationError, ValueError, TypeError):
+        print("[HR] CSV operation planner returned an invalid plan.")
         state["status"] = "error"
         state["error"] = "The planner returned invalid JSON or an unsupported operation plan."
         state["answer"] = (
@@ -246,6 +255,7 @@ def plan_csv_operation_node(
             "Please rephrase it with a specific employee, field, or calculation."
         )
     except Exception as exc:
+        print(f"[HR] CSV operation planning failed ({type(exc).__name__}).")
         state["status"] = "error"
         status_code = getattr(exc, "status_code", None)
         if isinstance(status_code, int):
@@ -274,8 +284,10 @@ def route_if_plan_exists(state: HrCsvGraphState) -> str:
 
 def validate_operation_plan_node(state: HrCsvGraphState) -> HrCsvGraphState:
     """Apply application-owned operation/field rules to the model's plan."""
+    print("[HR] Validating planned CSV operation.")
     plan = state["plan"]
     if plan is None:
+        print("[HR] Plan validation stopped: plan is missing.")
         state["status"] = "error"
         state["answer"] = "The CSV operation plan is missing."
         return state
@@ -293,6 +305,7 @@ def validate_operation_plan_node(state: HrCsvGraphState) -> HrCsvGraphState:
         state["status"] = "error"
         state["error"] = str(exc)
         state["answer"] = str(exc)
+    print(f"[HR] Plan validation complete: status={state['status']}.")
     return state
 
 
@@ -306,8 +319,10 @@ def execute_operation_node(
     csv_service: HrCsvQueryService,
 ) -> HrCsvGraphState:
     """Execute the validated plan and keep employee rows out of diagnostics."""
+    print("[HR] Executing validated read-only CSV operation.")
     plan = state["plan"]
     if plan is None:
+        print("[HR] CSV execution stopped: plan is missing.")
         state["status"] = "error"
         state["answer"] = "The CSV operation plan is missing."
         return state
@@ -317,6 +332,7 @@ def execute_operation_node(
             raise CsvAccessDeniedError("Access denied to HR CSV data.")
         result = csv_service.execute(plan, context)
     except CsvAccessDeniedError:
+        print("[HR] CSV execution denied.")
         state["status"] = "denied"
         state["answer"] = (
             "Access denied: this profile does not have the dedicated HR CSV permission."
@@ -324,6 +340,7 @@ def execute_operation_node(
         logger.info("hr_csv_authorization outcome=denied")
         return state
     except AmbiguousEmployeeError:
+        print("[HR] CSV execution needs clarification for an ambiguous match.")
         state["status"] = "needs_clarification"
         state["answer"] = (
             "More than one employee matches that name. Please use the employee ID."
@@ -331,6 +348,7 @@ def execute_operation_node(
         logger.info("hr_csv_operation outcome=ambiguous_lookup")
         return state
     except CsvOperationError:
+        print("[HR] CSV execution failed safely.")
         state["status"] = "error"
         state["answer"] = (
             "The HR CSV could not safely complete this operation. Check the "
@@ -352,6 +370,7 @@ def execute_operation_node(
             "hr_csv_operation outcome=success operation=%s",
             plan.operation,
         )
+    print(f"[HR] CSV operation complete: status={state['status']}.")
     return state
 
 
@@ -362,6 +381,7 @@ def route_after_operation(state: HrCsvGraphState) -> str:
 
 def generate_answer_node(state: HrCsvGraphState, llm: Any) -> HrCsvGraphState:
     """Ask the selected model to answer from the minimal operation result."""
+    print("[HR] Generating answer from the validated CSV result.")
     prompt = [
         SystemMessage(content=CSV_ANSWER_SYSTEM_PROMPT),
         HumanMessage(
@@ -389,6 +409,7 @@ def generate_answer_node(state: HrCsvGraphState, llm: Any) -> HrCsvGraphState:
             "The HR data was retrieved, but the selected model could not "
             "generate an answer. Try again or verify the result locally."
         )
+    print(f"[HR] Answer generation complete: status={state['status']}.")
     return state
 
 

@@ -43,7 +43,19 @@ def sample_row(
     full_name: str = "Alex Example",
     salary: str = "50000",
 ) -> dict[str, str]:
-    """Create synthetic employee data for temporary test CSVs."""
+    """Create synthetic employee data for temporary test CSVs.
+
+        Parameters:
+            employee_id (`str`): the employee id input.
+            full_name (`str`): the full name input.
+            salary (`str`): the salary input.
+
+        Returns:
+            The resulting value (`dict[str, str]`).
+
+        Called by:
+            HrCsvGraphTests.test_ceo_question_returns_no_match_when_csv_has_no_ceo_role, HrCsvServiceTests.setUp, HrCsvServiceTests.test_bad_header_and_bad_typed_values_fail_closed, HrCsvServiceTests.test_ceo_question_can_filter_role_and_return_name_and_salary, HrCsvServiceTests.test_date_maximum_returns_latest_date_ties_in_day_first_format, and other direct source references.
+    """
     return {
         "employee_id": employee_id,
         "full_name": full_name,
@@ -64,7 +76,18 @@ def sample_row(
 
 
 def write_sample_csv(path: Path, rows: list[dict[str, str]]) -> None:
-    """Write synthetic fixture rows for tests only."""
+    """Write synthetic fixture rows to a temporary CSV for tests only.
+
+        Parameters:
+            path (`Path`): the path input.
+            rows (`list[dict[str, str]]`): the rows input.
+
+        Returns:
+            The resulting value (`None`).
+
+        Called by:
+            HrCsvGraphTests.test_ceo_question_returns_no_match_when_csv_has_no_ceo_role, HrCsvServiceTests.setUp, HrCsvServiceTests.test_bad_header_and_bad_typed_values_fail_closed, HrCsvServiceTests.test_ceo_question_can_filter_role_and_return_name_and_salary, HrCsvServiceTests.test_date_maximum_returns_latest_date_ties_in_day_first_format, and other direct source references.
+    """
     import csv
 
     with path.open("w", encoding="utf-8", newline="") as output:
@@ -77,10 +100,34 @@ class FakeModel:
     """Return a supplied structured plan and a synthetic final response."""
 
     def __init__(self, plan: dict[str, Any]) -> None:
+        """Initialize this test double with its configured input state.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+                plan (`dict[str, Any]`): the plan input.
+
+            Returns:
+                None.
+
+            Called by:
+                AdaptiveRetrievalTests.test_groq_structured_answer_uses_json_schema_mode.FakeGroqModel.__init__, BackendError.__init__, TokenVerificationError.__init__, VectorAPIError.__init__.
+        """
         self.plan = plan
         self.prompts: list[Any] = []
 
     def invoke(self, prompt: Any):
+        """Provide the `invoke` behavior of this test double to the code under test.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+                prompt (`Any`): the prompt input.
+
+            Returns:
+                The value produced by the operation described above.
+
+            Called by:
+                the code under test through this fake interface.
+        """
         self.prompts.append(prompt)
         if "Validated plan:" in str(prompt):
             class Response:
@@ -98,6 +145,18 @@ class FailingPlannerModel:
         status_code = 400
 
     def invoke(self, prompt: Any):
+        """Provide the `invoke` behavior of this test double to the code under test.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+                prompt (`Any`): the prompt input.
+
+            Returns:
+                None.
+
+            Called by:
+                the code under test through this fake interface.
+        """
         del prompt
         raise self.ProviderError("synthetic provider details must not be surfaced")
 
@@ -106,6 +165,18 @@ class JsonPlannerModel(FakeModel):
     """Return a JSON-text plan as a chat model does without structured output."""
 
     def invoke(self, prompt: Any):
+        """Provide the invoke behavior used by this workflow or test.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+                prompt (`Any`): the prompt input.
+
+            Returns:
+                The value produced by the operation described above.
+
+            Called by:
+                the code under test through this fake interface.
+        """
         self.prompts.append(prompt)
         if "Validated plan:" not in str(prompt):
             return type("Response", (), {"content": json.dumps(self.plan)})()
@@ -120,6 +191,18 @@ class SpyCsvService:
     """Count CSV service calls to prove denied queries do not read data."""
 
     def __init__(self, result: dict[str, object] | None = None) -> None:
+        """Initialize this test double with its configured input state.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+                result (`dict[str, object] | None`): the result input.
+
+            Returns:
+                None.
+
+            Called by:
+                AdaptiveRetrievalTests.test_groq_structured_answer_uses_json_schema_mode.FakeGroqModel.__init__, BackendError.__init__, TokenVerificationError.__init__, VectorAPIError.__init__.
+        """
         self.calls = 0
         self.result = result or {"kind": "count", "count": 1}
 
@@ -128,6 +211,19 @@ class SpyCsvService:
         _plan: CsvOperationPlan,
         _authorization_context: EmployeeAuthorizationContext,
     ) -> dict[str, object]:
+        """Provide the `execute` behavior of this test double to the code under test.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+                _plan (`CsvOperationPlan`): the plan input.
+                _authorization_context (`EmployeeAuthorizationContext`): the authorization context input.
+
+            Returns:
+                The resulting value (`dict[str, object]`).
+
+            Called by:
+                the code under test through this fake interface.
+        """
         del _plan
         del _authorization_context
         self.calls += 1
@@ -142,14 +238,51 @@ class AuthorizedHrCsvQueryService(HrCsvQueryService):
         plan: CsvOperationPlan,
         authorization_context: EmployeeAuthorizationContext = TEST_HR_CONTEXT,
     ) -> dict[str, object]:
+        """Provide the `execute` behavior of this test double to the code under test.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+                plan (`CsvOperationPlan`): the plan input.
+                authorization_context (`EmployeeAuthorizationContext`): the authorization context input.
+
+            Returns:
+                The resulting value (`dict[str, object]`).
+
+            Called by:
+                the code under test through this fake interface.
+        """
         return super().execute(plan, authorization_context)
 
 
 class MutableAuthorizationRepository:
     def __init__(self, context: EmployeeAuthorizationContext) -> None:
+        """Initialize this test double with its configured input state.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+                context (`EmployeeAuthorizationContext`): the context input.
+
+            Returns:
+                None.
+
+            Called by:
+                AdaptiveRetrievalTests.test_groq_structured_answer_uses_json_schema_mode.FakeGroqModel.__init__, BackendError.__init__, TokenVerificationError.__init__, VectorAPIError.__init__.
+        """
         self.context = context
 
     def get_authorization_context(self, employee_id: str):
+        """Provide the `get authorization context` behavior of this test double to the code under test.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+                employee_id (`str`): the employee id input.
+
+            Returns:
+                The value produced by the operation described above.
+
+            Called by:
+                the code under test through this fake interface.
+        """
         if self.context.employee_id != employee_id:
             return None
         return self.context
@@ -159,6 +292,17 @@ class HrCsvServiceTests(unittest.TestCase):
     """Test safe fixed-operation CSV reads on synthetic temporary files."""
 
     def setUp(self) -> None:
+        """Prepare temporary files and fixture state for each test method.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None.
+
+            Called by:
+                the unittest framework before each test method in this class.
+        """
         self.temporary_directory = tempfile.TemporaryDirectory()
         self.csv_path = Path(self.temporary_directory.name) / "hr.csv"
         write_sample_csv(
@@ -171,9 +315,31 @@ class HrCsvServiceTests(unittest.TestCase):
         self.service = AuthorizedHrCsvQueryService(self.csv_path)
 
     def tearDown(self) -> None:
+        """Remove temporary files and release fixture state after each test method.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None.
+
+            Called by:
+                the unittest framework after each test method in this class.
+        """
         self.temporary_directory.cleanup()
 
     def test_csv_data_access_boundary_allows_all_only_with_explicit_grant(self) -> None:
+        """Verify csv data access boundary allows all only with explicit grant.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         plan = CsvOperationPlan(operation="count")
         unauthorized_context = EmployeeAuthorizationContext(
             employee_id="test-all",
@@ -196,6 +362,17 @@ class HrCsvServiceTests(unittest.TestCase):
         )
 
     def test_sqlite_permission_is_rechecked_immediately_before_csv_read(self) -> None:
+        """Verify sqlite permission is rechecked immediately before csv read.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         database_path = Path(self.temporary_directory.name) / "profiles.sqlite3"
         repository = SQLiteEmployeeRepository(database_path)
         repository.provision(
@@ -228,6 +405,17 @@ class HrCsvServiceTests(unittest.TestCase):
             service.execute(plan, context)
 
     def test_firestore_permission_is_rechecked_immediately_before_csv_read(self) -> None:
+        """Verify firestore permission is rechecked immediately before csv read.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         context = EmployeeAuthorizationContext(
             employee_id="firestore-hr",
             access_groups=("HR", "General"),
@@ -249,6 +437,17 @@ class HrCsvServiceTests(unittest.TestCase):
             service.execute(plan, context)
 
     def test_exact_employee_id_lookup_returns_only_requested_fields(self) -> None:
+        """Verify exact employee id lookup returns only requested fields.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         plan = CsvOperationPlan(
             operation="lookup",
             filters=[CsvFilter(field="employee_id", operator="equals", value="E001")],
@@ -265,6 +464,17 @@ class HrCsvServiceTests(unittest.TestCase):
         self.assertNotIn("date_of_birth", result["records"][0])
 
     def test_full_name_lookup_is_case_insensitive_and_duplicate_is_ambiguous(self) -> None:
+        """Verify full name lookup is case insensitive and duplicate is ambiguous.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         exact_plan = CsvOperationPlan(
             operation="lookup",
             filters=[CsvFilter(field="full_name", operator="equals", value="alex example")],
@@ -279,6 +489,17 @@ class HrCsvServiceTests(unittest.TestCase):
             self.service.execute(exact_plan)
 
     def test_filter_and_count_operations(self) -> None:
+        """Verify filter and count operations.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         filter_plan = CsvOperationPlan(
             operation="filter",
             filters=[CsvFilter(field="salary", operator="greater_than", value="60000")],
@@ -298,6 +519,17 @@ class HrCsvServiceTests(unittest.TestCase):
         self.assertEqual(len(count_result["records"]), 2)
 
     def test_count_returns_names_and_ids_when_result_has_at_most_twenty_rows(self) -> None:
+        """Verify count returns names and ids when result has at most twenty rows.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         result = self.service.execute(CsvOperationPlan(operation="count"))
 
         self.assertEqual(result["count"], 2)
@@ -310,6 +542,17 @@ class HrCsvServiceTests(unittest.TestCase):
         )
 
     def test_date_aliases_normalize_case_insensitively_before_validation(self) -> None:
+        """Verify date aliases normalize case insensitively before validation.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         aliases = {
             "city": "location",
             "office": "location",
@@ -340,6 +583,17 @@ class HrCsvServiceTests(unittest.TestCase):
                 self.assertEqual(plan.requested_fields[1], canonical)
 
     def test_location_can_be_grouped(self) -> None:
+        """Verify location can be grouped.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         first = sample_row("E001")
         first["location"] = "Jaipur"
         second = sample_row("E002", "Jordan Sample")
@@ -358,6 +612,17 @@ class HrCsvServiceTests(unittest.TestCase):
         )
 
     def test_date_year_filter_matches_day_first_source_dates(self) -> None:
+        """Verify date year filter matches day first source dates.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         row_2024 = sample_row("E001")
         row_2024["date_of_joining"] = "29-11-2024"
         row_2023 = sample_row("E002", "Jordan Sample")
@@ -383,6 +648,17 @@ class HrCsvServiceTests(unittest.TestCase):
         )
 
     def test_date_maximum_returns_latest_date_ties_in_day_first_format(self) -> None:
+        """Verify date maximum returns latest date ties in day first format.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         first = sample_row("E001")
         first["date_of_joining"] = "29-11-2024"
         second = sample_row("E002", "Jordan Sample")
@@ -418,6 +694,17 @@ class HrCsvServiceTests(unittest.TestCase):
         )
 
     def test_date_minimum_sorts_dates_chronologically_not_as_text(self) -> None:
+        """Verify date minimum sorts dates chronologically not as text.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         later = sample_row("E001")
         later["date_of_birth"] = "05-08-1999"
         earlier = sample_row("E002", "Jordan Sample")
@@ -436,6 +723,17 @@ class HrCsvServiceTests(unittest.TestCase):
         self.assertEqual(result["records"][0]["employee_id"], "E002")
 
     def test_ceo_question_can_filter_role_and_return_name_and_salary(self) -> None:
+        """Verify ceo question can filter role and return name and salary.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         ceo = sample_row("E003", "Taylor Example", "150000")
         ceo["role"] = "Chief Executive Officer"
         write_sample_csv(self.csv_path, [sample_row(), ceo])
@@ -460,6 +758,17 @@ class HrCsvServiceTests(unittest.TestCase):
         )
 
     def test_duplicate_employee_id_operation_reports_only_repeated_ids(self) -> None:
+        """Verify duplicate employee id operation reports only repeated ids.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         write_sample_csv(
             self.csv_path,
             [
@@ -477,6 +786,17 @@ class HrCsvServiceTests(unittest.TestCase):
         self.assertEqual(len(result["records"]), 2)
 
     def test_graph_answers_duplicate_employee_id_question(self) -> None:
+        """Verify graph answers duplicate employee id question.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         write_sample_csv(
             self.csv_path,
             [
@@ -502,6 +822,17 @@ class HrCsvServiceTests(unittest.TestCase):
         self.assertEqual(len(model.prompts), 2)
 
     def test_maximum_salary_can_exclude_ceo_title_alias(self) -> None:
+        """Verify maximum salary can exclude ceo title alias.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         ceo = sample_row("E001", "Alex Example", "150000")
         ceo["role"] = "Chief Executive Officer"
         write_sample_csv(
@@ -526,6 +857,17 @@ class HrCsvServiceTests(unittest.TestCase):
         self.assertEqual(result["value"], 70000.0)
 
     def test_maximum_aggregate_returns_all_tied_rows(self) -> None:
+        """Verify maximum aggregate returns all tied rows.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         write_sample_csv(
             self.csv_path,
             [
@@ -554,6 +896,17 @@ class HrCsvServiceTests(unittest.TestCase):
         )
 
     def test_graph_answers_highest_salary_excluding_ceo_question(self) -> None:
+        """Verify graph answers highest salary excluding ceo question.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         ceo = sample_row("E001", "Alex Example", "150000")
         ceo["role"] = "Chief Executive Officer"
         write_sample_csv(
@@ -581,6 +934,17 @@ class HrCsvServiceTests(unittest.TestCase):
         self.assertEqual(len(model.prompts), 2)
 
     def test_numeric_aggregate(self) -> None:
+        """Verify numeric aggregate.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         plan = CsvOperationPlan(
             operation="aggregate",
             aggregate_function="average",
@@ -592,6 +956,17 @@ class HrCsvServiceTests(unittest.TestCase):
         )
 
     def test_unsupported_operation_combinations_are_rejected(self) -> None:
+        """Verify unsupported operation combinations are rejected.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         invalid_plans = (
             CsvOperationPlan(
                 operation="lookup",
@@ -612,6 +987,17 @@ class HrCsvServiceTests(unittest.TestCase):
                 validate_operation_plan(plan)
 
     def test_no_match_does_not_return_nearby_rows(self) -> None:
+        """Verify no match does not return nearby rows.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         plan = CsvOperationPlan(
             operation="lookup",
             filters=[CsvFilter(field="employee_id", operator="equals", value="MISSING")],
@@ -619,6 +1005,17 @@ class HrCsvServiceTests(unittest.TestCase):
         self.assertEqual(self.service.execute(plan)["records"], [])
 
     def test_bad_header_and_bad_typed_values_fail_closed(self) -> None:
+        """Verify bad header and bad typed values fail closed.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         self.csv_path.write_text("employee_id,other\nE001,value\n", encoding="utf-8")
         with self.assertRaisesRegex(CsvOperationError, "columns"):
             self.service.execute(CsvOperationPlan(operation="count"))
@@ -630,6 +1027,17 @@ class HrCsvServiceTests(unittest.TestCase):
             self.service.execute(CsvOperationPlan(operation="count"))
 
     def test_csv_bytes_are_unchanged_after_query(self) -> None:
+        """Verify csv bytes are unchanged after query.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         before = hashlib.sha256(self.csv_path.read_bytes()).digest()
         plan = CsvOperationPlan(
             operation="lookup",
@@ -645,6 +1053,17 @@ class HrCsvGraphTests(unittest.TestCase):
     """Verify graph authorization, model calls, and error routing."""
 
     def test_non_hr_profiles_are_denied_before_planning_or_csv_read(self) -> None:
+        """Verify non hr profiles are denied before planning or csv read.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         plan = {
             "operation": "count",
             "filters": [],
@@ -664,6 +1083,17 @@ class HrCsvGraphTests(unittest.TestCase):
                 self.assertEqual(service.calls, 0)
 
     def test_all_profile_is_authorized_for_the_standalone_csv_graph(self) -> None:
+        """Verify all profile is authorized for the standalone csv graph.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         plan = {
             "operation": "count",
             "filters": [],
@@ -680,6 +1110,17 @@ class HrCsvGraphTests(unittest.TestCase):
         self.assertEqual(service.calls, 1)
 
     def test_hr_operation_sends_only_minimized_result_to_answer_model(self) -> None:
+        """Verify hr operation sends only minimized result to answer model.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         plan = {
             "operation": "lookup",
             "filters": [{"field": "employee_id", "operator": "equals", "value": "E001"}],
@@ -711,6 +1152,17 @@ class HrCsvGraphTests(unittest.TestCase):
         self.assertNotIn("Operation:", result["answer"])
 
     def test_planner_prompt_describes_all_fields_and_maps_ceo_question(self) -> None:
+        """Verify planner prompt describes all fields and maps ceo question.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         plan = {
             "operation": "filter",
             "filters": [{"field": "role", "operator": "contains", "value": "CEO"}],
@@ -739,6 +1191,17 @@ class HrCsvGraphTests(unittest.TestCase):
         self.assertIn("aggregate maximum on salary with a role not_equals CEO filter", planner_prompt)
 
     def test_planner_prompt_lists_exact_fields_operations_and_date_meanings(self) -> None:
+        """Verify planner prompt lists exact fields operations and date meanings.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         model = FakeModel({"operation": "count"})
         graph = create_hr_csv_graph(model, SpyCsvService())
         graph.invoke(initial_state("HR", "How many employees are there?"))
@@ -754,6 +1217,17 @@ class HrCsvGraphTests(unittest.TestCase):
         )
 
     def test_unsupported_field_and_operation_errors_name_exact_plan_values(self) -> None:
+        """Verify unsupported field and operation errors name exact plan values.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         unsupported_plans = (
             (
                 {
@@ -780,6 +1254,17 @@ class HrCsvGraphTests(unittest.TestCase):
                 self.assertEqual(result["error"], expected_error)
 
     def test_provider_http_error_is_reported_without_response_details(self) -> None:
+        """Verify provider http error is reported without response details.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         service = SpyCsvService()
         graph = create_hr_csv_graph(FailingPlannerModel(), service)
 
@@ -791,6 +1276,17 @@ class HrCsvGraphTests(unittest.TestCase):
         self.assertEqual(service.calls, 0)
 
     def test_planner_parses_json_text_and_validates_it_before_csv_access(self) -> None:
+        """Verify planner parses json text and validates it before csv access.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         model = JsonPlannerModel(
             {
                 "operation": "count",
@@ -808,6 +1304,17 @@ class HrCsvGraphTests(unittest.TestCase):
         self.assertEqual(service.calls, 1)
 
     def test_out_of_scope_and_clarify_decisions_do_not_read_csv(self) -> None:
+        """Verify out of scope and clarify decisions do not read csv.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         for plan, expected_status in (
             (
                 {
@@ -833,6 +1340,17 @@ class HrCsvGraphTests(unittest.TestCase):
                 self.assertEqual(len(model.prompts), 1)
 
     def test_ceo_question_returns_no_match_when_csv_has_no_ceo_role(self) -> None:
+        """Verify ceo question returns no match when csv has no ceo role.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         with tempfile.TemporaryDirectory() as temporary_directory:
             csv_path = Path(temporary_directory) / "hr.csv"
             write_sample_csv(csv_path, [sample_row()])
@@ -854,6 +1372,17 @@ class HrCsvGraphTests(unittest.TestCase):
         self.assertEqual(len(model.prompts), 1)
 
     def test_mutation_request_is_rejected_without_model_or_csv_access(self) -> None:
+        """Verify mutation request is rejected without model or csv access.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         plan = {"operation": "count"}
         service = SpyCsvService()
         model = FakeModel(plan)
@@ -867,6 +1396,17 @@ class HrCsvGraphTests(unittest.TestCase):
         self.assertEqual(service.calls, 0)
 
     def test_empty_result_does_not_call_answer_model(self) -> None:
+        """Verify empty result does not call answer model.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         plan = {
             "operation": "lookup",
             "filters": [{"field": "employee_id", "operator": "equals", "value": "MISSING"}],

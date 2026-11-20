@@ -25,6 +25,7 @@ class BackendError(RuntimeError):
         status_code: int | None = None,
         code: str | None = None,
     ) -> None:
+        """Create a safe backend error with optional HTTP metadata; message, status_code, and code describe the failure; return None; HTTP and mock client methods raise this exception."""
         super().__init__(message)
         self.status_code = status_code
         self.code = code
@@ -37,18 +38,26 @@ class SessionExpiredError(BackendError):
 class BackendClient(Protocol):
     is_mock: bool
 
-    def login(self, employee_id: str, password: str) -> dict[str, Any]: ...
+    def login(self, employee_id: str, password: str) -> dict[str, Any]:
+        """Authenticate supplied credentials; employee_id and password are login inputs; return the API login mapping; the Streamlit login page calls this client API."""
+        ...
 
     def ask(
         self,
         token: str,
         question: str,
         chat_id: str | None,
-    ) -> dict[str, Any]: ...
+    ) -> dict[str, Any]:
+        """Submit one question for the authenticated session; token, question, and optional chat_id define the request; return the assistant response mapping; the Streamlit chat page calls this client API."""
+        ...
 
-    def list_chats(self, token: str) -> list[dict[str, Any]]: ...
+    def list_chats(self, token: str) -> list[dict[str, Any]]:
+        """List chats associated with token; token authenticates the request; return chat summaries; the Streamlit chat page calls this client API."""
+        ...
 
-    def load_chat(self, token: str, chat_id: str) -> list[dict[str, Any]]: ...
+    def load_chat(self, token: str, chat_id: str) -> list[dict[str, Any]]:
+        """Load a chat's messages; token authenticates and chat_id selects the chat; return message mappings; the Streamlit chat page calls this client API."""
+        ...
 
 
 class HttpBackendClient:
@@ -60,6 +69,7 @@ class HttpBackendClient:
         timeout_seconds: float,
         cloud_run_iam_auth: bool = False,
     ) -> None:
+        """Configure the real HTTP app API client; base_url, timeout_seconds, and cloud_run_iam_auth set endpoint and request authentication; return None; create_backend_client constructs this client."""
         parsed = urlsplit(base_url)
         if (
             parsed.scheme not in {"http", "https"}
@@ -75,6 +85,7 @@ class HttpBackendClient:
         self._cloud_run_iam_auth = cloud_run_iam_auth
 
     def login(self, employee_id: str, password: str) -> dict[str, Any]:
+        """Submit employee credentials to the login API; employee_id is trimmed and password is sent only in the request; return the response mapping; the Streamlit login page calls this method."""
         return self._request(
             "POST",
             "/auth/login",
@@ -83,6 +94,7 @@ class HttpBackendClient:
         )
 
     def me(self, token: str) -> dict[str, Any]:
+        """Fetch the authenticated employee profile; token is the bearer credential; return the profile mapping; no direct app caller is present, so this is a client API for authenticated consumers."""
         return self._request("GET", "/v1/me", token=token)
 
     def ask(
@@ -91,18 +103,21 @@ class HttpBackendClient:
         question: str,
         chat_id: str | None,
     ) -> dict[str, Any]:
+        """Submit one question and optional chat ID; token authenticates the request, question is the user input, and chat_id selects an existing chat; return the assistant response mapping; the Streamlit chat page calls this method."""
         payload: dict[str, Any] = {"question": question}
         if chat_id is not None:
             payload["chat_id"] = chat_id
         return self._request("POST", "/v1/assistant/ask", token=token, payload=payload)
 
     def list_chats(self, token: str) -> list[dict[str, Any]]:
+        """Retrieve the authenticated employee's chat summaries; token is the bearer credential; return a list of mappings or raise BackendError for an invalid response; the Streamlit chat page calls this method."""
         response = self._request("GET", "/v1/chats", token=token)
         if not isinstance(response, list):
             raise BackendError("The chat service returned an invalid response.")
         return response
 
     def load_chat(self, token: str, chat_id: str) -> list[dict[str, Any]]:
+        """Retrieve messages for a chat; token authenticates and chat_id identifies the chat; return a list of message mappings or raise BackendError for an invalid response; the Streamlit chat page calls this method."""
         response = self._request(
             "GET",
             f"/v1/chats/{chat_id}/messages",
@@ -120,6 +135,7 @@ class HttpBackendClient:
         payload: dict[str, Any] | None = None,
         is_login: bool = False,
     ) -> Any:
+        """Send one API request and normalize transport or response failures; method, path, optional token, payload, and is_login define the request; return decoded JSON or raise BackendError; this client's public methods call this helper."""
         headers = {"Accept": "application/json"}
         if self._cloud_run_iam_auth:
             try:
@@ -163,6 +179,7 @@ class HttpBackendClient:
 
     @staticmethod
     def _safe_error(response: httpx.Response) -> tuple[str, str | None]:
+        """Extract only safe message and code fields from an API error response; response is the HTTP response; return message/code strings with generic fallbacks; _request calls this helper."""
         try:
             error = response.json().get("error", {})
             message = error.get("message")
@@ -182,11 +199,13 @@ class MockBackendClient:
     is_mock = True
 
     def __init__(self) -> None:
+        """Initialize isolated in-memory demo chat state; no explicit parameters; return None; create_backend_client constructs this client only for explicit mock mode."""
         self._chats: dict[str, list[dict[str, Any]]] = {}
         self._titles: dict[str, str] = {}
         self._updated_at: dict[str, str] = {}
 
     def login(self, employee_id: str, password: str) -> dict[str, Any]:
+        """Simulate sign-in without retaining credentials; employee_id and password are checked for presence; return a clearly marked demo profile/token or raise BackendError; the Streamlit login page calls this method."""
         if not employee_id.strip() or not password:
             raise BackendError("Invalid employee ID or password.", 401)
         return {
@@ -202,6 +221,7 @@ class MockBackendClient:
         question: str,
         chat_id: str | None,
     ) -> dict[str, Any]:
+        """Create a fake chat response and persist its simulated messages; token authenticates the demo session, question is the prompt, and chat_id selects or creates a chat; return an explicitly fake answer mapping; the Streamlit chat page calls this method."""
         if not token:
             raise SessionExpiredError("Your session has expired.", 401)
         if chat_id is None:
@@ -243,6 +263,7 @@ class MockBackendClient:
         }
 
     def list_chats(self, token: str) -> list[dict[str, Any]]:
+        """List simulated chats newest first; token identifies an active demo session; return chat summary mappings or raise SessionExpiredError; the Streamlit chat page calls this method."""
         if not token:
             raise SessionExpiredError("Your session has expired.", 401)
         return [
@@ -261,6 +282,7 @@ class MockBackendClient:
         ]
 
     def load_chat(self, token: str, chat_id: str) -> list[dict[str, Any]]:
+        """Load simulated messages; token identifies an active demo session and chat_id selects the chat; return message mappings or raise a backend error; the Streamlit chat page calls this method."""
         if not token:
             raise SessionExpiredError("Your session has expired.", 401)
         if chat_id not in self._chats:
@@ -273,6 +295,7 @@ def create_backend_client(
     base_url: str | None = None,
     timeout_seconds: float | None = None,
 ) -> BackendClient:
+    """Create the configured backend client; optional mode, base_url, and timeout_seconds override environment settings; return the real HTTP or explicit mock client, or raise ValueError for invalid configuration; session_state.backend_client calls this factory."""
     configured_mode = mode if mode is not None else os.getenv("ASSISTANT_API_MODE", "")
     selected_mode = configured_mode.strip().casefold() or "real"
     if selected_mode == "mock":

@@ -11,7 +11,17 @@ PROFILE_CHOICES = ("Engineering", "Finance", "General", "HR", "Marketing", "All"
 
 
 def ask_for_profile() -> str:
-    """Collect a simulated profile so HR authorization can be tested locally."""
+    """Send the supplied request and return the resulting for profile.
+
+        Parameters:
+            None.
+
+        Returns:
+            The resulting value (`str`).
+
+        Called by:
+            main.
+    """
     allowed = ", ".join(PROFILE_CHOICES)
     while True:
         profile = input(f"Select a simulated profile ({allowed}): ").strip()
@@ -25,7 +35,17 @@ def ask_for_profile() -> str:
 
 
 def main() -> int:
-    """Run multiple question/answer checks without changing the CSV file."""
+    """Run the command-line workflow and return its process exit status.
+
+        Parameters:
+            None.
+
+        Returns:
+            The resulting value (`int`).
+
+        Called by:
+            the `python scripts/hr_csv_agent_test.py` CLI invocation (or direct module execution).
+    """
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(message)s",

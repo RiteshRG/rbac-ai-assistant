@@ -11,6 +11,7 @@ _APP_NAME = "finsolve-app-api"
 
 
 def create_firestore_client(settings: AppSettings) -> firestore.Client:
+    """Initialize and return the named Firebase Admin Firestore client; settings supplies project and credential configuration; return a client or raise for invalid configuration; create_app calls this during lifespan startup."""
     settings.validate()
     credential_path = settings.firebase_service_account_path
     credential = None

@@ -1,0 +1,103 @@
+{
+  "route_accuracy:adaptive": {
+    "value": 1.0,
+    "n": 1
+  },
+  "retrieval_recall_at_5:adaptive": {
+    "value": null,
+    "n": 0
+  },
+  "retrieval_hit_at_5:adaptive": {
+    "value": null,
+    "n": 0
+  },
+  "retrieval_mrr:adaptive": {
+    "value": null,
+    "n": 0
+  },
+  "fact_recall:adaptive": {
+    "value": null,
+    "n": 0
+  },
+  "retry_rate:adaptive": {
+    "value": 0.0,
+    "n": 1
+  },
+  "groq_rate_limit_retries:adaptive": {
+    "value": 0,
+    "n": 1
+  },
+  "groq_rate_limit_wait_ms:adaptive": {
+    "value": 0,
+    "n": 1
+  },
+  "error_fallback_rate:adaptive": {
+    "value": 0.0,
+    "n": 1
+  },
+  "latency_p50_ms:adaptive": {
+    "value": 0.0,
+    "n": 1
+  },
+  "latency_p95_ms:adaptive": {
+    "value": 0.0,
+    "n": 1
+  },
+  "route_accuracy:baseline": {
+    "value": 1.0,
+    "n": 1
+  },
+  "retrieval_recall_at_5:baseline": {
+    "value": null,
+    "n": 0
+  },
+  "retrieval_hit_at_5:baseline": {
+    "value": null,
+    "n": 0
+  },
+  "retrieval_mrr:baseline": {
+    "value": null,
+    "n": 0
+  },
+  "fact_recall:baseline": {
+    "value": null,
+    "n": 0
+  },
+  "retry_rate:baseline": {
+    "value": 0.0,
+    "n": 1
+  },
+  "groq_rate_limit_retries:baseline": {
+    "value": 0,
+    "n": 1
+  },
+  "groq_rate_limit_wait_ms:baseline": {
+    "value": 0,
+    "n": 1
+  },
+  "error_fallback_rate:baseline": {
+    "value": 0.0,
+    "n": 1
+  },
+  "latency_p50_ms:baseline": {
+    "value": 0.0,
+    "n": 1
+  },
+  "latency_p95_ms:baseline": {
+    "value": 0.0,
+    "n": 1
+  },
+  "routing_confusion_matrix": {
+    "value": {
+      "document_question": {
+        "document_question": 2
+      }
+    },
+    "n": 2
+  },
+  "ragas": {
+    "enabled": false,
+    "metrics": {},
+    "error": "Ragas scoring skipped"
+  }
+}

@@ -30,8 +30,10 @@ def create_app(
     graph_service: Any | None = None,
     login_throttle: LoginThrottle | None = None,
 ) -> FastAPI:
+    """Build the configured employee-facing API; optional settings, database, repositories, stores, graph service, and login throttle allow dependency injection; return the FastAPI application; module initialization and tests call this factory."""
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        """Initialize app services and release control to the running server; app is the FastAPI instance; return an async lifespan context; FastAPI invokes this during application startup and shutdown."""
         active_settings = settings or AppSettings.from_environment()
         active_settings.validate()
         active_database = database
@@ -83,6 +85,7 @@ def create_app(
         _request: Request,
         exc: HTTPException,
     ) -> JSONResponse:
+        """Normalize HTTP exception details into the API error envelope; _request is the request and exc is the raised HTTP exception; return a JSON response with its status and headers; FastAPI invokes this exception handler."""
         detail = exc.detail
         if not isinstance(detail, dict):
             detail = {"code": "request_error", "message": str(detail)}
@@ -97,6 +100,7 @@ def create_app(
         _request: Request,
         _exc: RequestValidationError,
     ) -> JSONResponse:
+        """Return a stable invalid-request response; _request and _exc are the request and validation error; return a 422 JSON response; FastAPI invokes this exception handler."""
         return JSONResponse(
             status_code=422,
             content={
@@ -112,6 +116,7 @@ def create_app(
         _request: Request,
         exc: GoogleAPICallError,
     ) -> JSONResponse:
+        """Log a safe Firestore failure type and return service-unavailable details; _request and exc are the request and provider error; return a 503 JSON response; FastAPI invokes this exception handler."""
         logger.warning("firestore_request_failed error_type=%s", type(exc).__name__)
         return JSONResponse(
             status_code=503,
@@ -128,6 +133,7 @@ def create_app(
         _request: Request,
         exc: Exception,
     ) -> JSONResponse:
+        """Log an unexpected error type without exposing details and return a generic failure; _request and exc are the request and exception; return a 500 JSON response; FastAPI invokes this exception handler."""
         logger.error("app_api_unexpected_error error_type=%s", type(exc).__name__)
         return JSONResponse(
             status_code=500,

@@ -21,7 +21,17 @@ from vector_service.retrieval import (
 
 
 def simple_token_count(text: str) -> int:
-    """Use word count for quick tests; ingestion uses the model tokenizer."""
+    """Count whitespace-separated words as a deterministic test substitute for the model tokenizer.
+
+        Parameters:
+            text (`str`): the text input.
+
+        Returns:
+            The resulting value (`int`).
+
+        Called by:
+            no direct source caller was found.
+    """
     return len(text.split())
 
 
@@ -31,10 +41,34 @@ class FakeCollection:
     name = "test_documents"
 
     def __init__(self) -> None:
+        """Initialize this test double with its configured input state.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None.
+
+            Called by:
+                AdaptiveRetrievalTests.test_groq_structured_answer_uses_json_schema_mode.FakeGroqModel.__init__, BackendError.__init__, TokenVerificationError.__init__, VectorAPIError.__init__.
+        """
         self.records: dict[str, tuple[str, dict[str, str | int]]] = {}
         self.last_query: dict[str, object] | None = None
 
     def get(self, where: dict[str, str], include: list[str]) -> dict[str, Any]:
+        """Provide the `get` behavior of this test double to the code under test.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+                where (`dict[str, str]`): the where input.
+                include (`list[str]`): the include input.
+
+            Returns:
+                The resulting value (`dict[str, Any]`).
+
+            Called by:
+                the code under test through this fake interface.
+        """
         if "source_file" in where:
             is_match = lambda metadata: metadata["source_file"] == where["source_file"]
         else:
@@ -57,10 +91,36 @@ class FakeCollection:
         documents: list[str],
         metadatas: list[dict[str, str | int]],
     ) -> None:
+        """Provide the `upsert` behavior of this test double to the code under test.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+                ids (`list[str]`): the ids input.
+                documents (`list[str]`): the documents input.
+                metadatas (`list[dict[str, str | int]]`): the metadatas input.
+
+            Returns:
+                The resulting value (`None`).
+
+            Called by:
+                the code under test through this fake interface.
+        """
         for chunk_id, document, metadata in zip(ids, documents, metadatas):
             self.records[chunk_id] = (document, metadata)
 
     def delete(self, ids: list[str]) -> None:
+        """Provide the `delete` behavior of this test double to the code under test.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+                ids (`list[str]`): the ids input.
+
+            Returns:
+                The resulting value (`None`).
+
+            Called by:
+                the code under test through this fake interface.
+        """
         for chunk_id in ids:
             self.records.pop(chunk_id, None)
 
@@ -71,6 +131,21 @@ class FakeCollection:
         where: dict[str, object],
         include: list[str],
     ) -> dict[str, list[list[object]]]:
+        """Provide the `query` behavior of this test double to the code under test.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+                query_texts (`list[str]`): the query texts input.
+                n_results (`int`): the n results input.
+                where (`dict[str, object]`): the where input.
+                include (`list[str]`): the include input.
+
+            Returns:
+                The resulting value (`dict[str, list[list[object]]]`).
+
+            Called by:
+                the code under test through this fake interface.
+        """
         self.last_query = {
             "query_texts": query_texts,
             "where": where,
@@ -96,9 +171,33 @@ class FakeEmployeeRepository:
     """Return provisioned employee groups for the retrieval authorization tests."""
 
     def __init__(self, profiles: dict[str, Sequence[str]]) -> None:
+        """Initialize this test double with its configured input state.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+                profiles (`dict[str, Sequence[str]]`): the profiles input.
+
+            Returns:
+                None.
+
+            Called by:
+                AdaptiveRetrievalTests.test_groq_structured_answer_uses_json_schema_mode.FakeGroqModel.__init__, BackendError.__init__, TokenVerificationError.__init__, VectorAPIError.__init__.
+        """
         self.profiles = profiles
 
     def get_access_groups(self, employee_id: str) -> Sequence[str] | None:
+        """Provide the `get access groups` behavior of this test double to the code under test.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+                employee_id (`str`): the employee id input.
+
+            Returns:
+                The resulting value (`Sequence[str] | None`).
+
+            Called by:
+                the code under test through this fake interface.
+        """
         return self.profiles.get(employee_id)
 
 
@@ -106,6 +205,18 @@ class FailingEmployeeRepository:
     """Simulate an unavailable trusted profile store."""
 
     def get_access_groups(self, employee_id: str) -> Sequence[str] | None:
+        """Provide the `get access groups` behavior of this test double to the code under test.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+                employee_id (`str`): the employee id input.
+
+            Returns:
+                The resulting value (`Sequence[str] | None`).
+
+            Called by:
+                the code under test through this fake interface.
+        """
         if employee_id == "employee-1":
             raise RuntimeError("Profile store is unavailable.")
         return None
@@ -115,6 +226,17 @@ class VectorDatabaseTests(unittest.TestCase):
     """Check core acceptance criteria without downloading or embedding a model."""
 
     def test_effective_groups_add_general_and_expand_all(self) -> None:
+        """Verify effective groups add general and expand all.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         self.assertEqual(effective_access_groups(["Finance"]), ("Finance", "General"))
         self.assertEqual(
             effective_access_groups(["All"]),
@@ -122,11 +244,33 @@ class VectorDatabaseTests(unittest.TestCase):
         )
 
     def test_invalid_groups_fail_closed(self) -> None:
+        """Verify invalid groups fail closed.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         for groups in (None, [], ["Unknown"], ["All", "Finance"]):
             with self.subTest(groups=groups), self.assertRaises(AuthorizationError):
                 effective_access_groups(groups)
 
     def test_heading_sections_and_chunk_metadata_are_preserved(self) -> None:
+        """Verify heading sections and chunk metadata are preserved.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         markdown = (
             "# Finance Summary\n\n"
             "Executive Summary:\n"
@@ -156,6 +300,17 @@ class VectorDatabaseTests(unittest.TestCase):
         self.assertEqual(chunks[0].metadata["chunk_index"], 0)
 
     def test_hr_folder_is_rejected_by_chunking_too(self) -> None:
+        """Verify hr folder is rejected by chunking too.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         with self.assertRaises(ValueError):
             make_document_chunks(
                 "# HR Data\n\nEmployee records.",
@@ -165,6 +320,17 @@ class VectorDatabaseTests(unittest.TestCase):
             )
 
     def test_ingestion_is_repeatable_and_removes_stale_chunks(self) -> None:
+        """Verify ingestion is repeatable and removes stale chunks.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         with tempfile.TemporaryDirectory() as temporary_directory:
             data_root = Path(temporary_directory)
             source_folder = data_root / "engineering"
@@ -189,6 +355,17 @@ class VectorDatabaseTests(unittest.TestCase):
             self.assertNotEqual(first_ids, set(collection.records))
 
     def test_source_discovery_never_reads_hr(self) -> None:
+        """Verify source discovery never reads hr.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         with tempfile.TemporaryDirectory() as temporary_directory:
             data_root = Path(temporary_directory)
             for department in ("engineering", "finance", "general", "marketing", "hr"):
@@ -203,6 +380,17 @@ class VectorDatabaseTests(unittest.TestCase):
             self.assertTrue(all(path.parent.name != "hr" for path in found))
 
     def test_ingestion_removes_chunks_for_deleted_source(self) -> None:
+        """Verify ingestion removes chunks for deleted source.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         with tempfile.TemporaryDirectory() as temporary_directory:
             data_root = Path(temporary_directory)
             for department in ("engineering", "finance", "general", "marketing"):
@@ -229,6 +417,17 @@ class VectorDatabaseTests(unittest.TestCase):
             self.assertTrue(removed_ids.isdisjoint(collection.records))
 
     def test_search_filter_comes_from_profile_and_hides_other_groups(self) -> None:
+        """Verify search filter comes from profile and hides other groups.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         collection = FakeCollection()
         collection.records["finance"] = (
             "Finance plan",
@@ -277,6 +476,17 @@ class VectorDatabaseTests(unittest.TestCase):
         )
 
     def test_unknown_employee_never_queries_collection(self) -> None:
+        """Verify unknown employee never queries collection.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         collection = FakeCollection()
         service = DocumentSearchService(collection, FakeEmployeeRepository({}))
 
@@ -286,6 +496,17 @@ class VectorDatabaseTests(unittest.TestCase):
         self.assertIsNone(collection.last_query)
 
     def test_profile_store_error_is_denied_before_collection_query(self) -> None:
+        """Verify profile store error is denied before collection query.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         collection = FakeCollection()
         service = DocumentSearchService(collection, FailingEmployeeRepository())
 

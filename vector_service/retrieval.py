@@ -26,7 +26,16 @@ class EmployeeAccessRepository(Protocol):
     """Minimum employee-store contract needed for safe document retrieval."""
 
     def get_access_groups(self, employee_id: str) -> Sequence[str] | None:
-        """Return provisioned groups, or None when the employee does not exist."""
+        """Look up provisioned groups for an authenticated employee.
+
+        Args:
+            employee_id: Verified employee identifier.
+
+        Returns:
+            The profile's access groups, or ``None`` if the employee is absent.
+
+        Called by: ``DocumentSearchService.search`` through the repository.
+        """
 
 
 @dataclass(frozen=True)
@@ -47,6 +56,16 @@ def effective_access_groups(profile_groups: Sequence[str] | None) -> tuple[str, 
 
     `All` is accepted only as the sole profile group. Unknown, empty, or malformed
     data is rejected so the caller cannot accidentally run an unfiltered query.
+
+    Args:
+        profile_groups: Access groups obtained from a trusted employee profile or
+            verified internal token.
+
+    Returns:
+        Canonical allowed department groups in configured department order.
+
+    Called by: Token verification, employee profile access validation, and
+        ``DocumentSearchService.search_for_groups``.
     """
     if (
         not isinstance(profile_groups, Sequence)
@@ -87,7 +106,18 @@ class DocumentSearchService:
         collection: chromadb.Collection,
         employee_repository: EmployeeAccessRepository | None = None,
     ) -> None:
-        """Keep the collection and optional local profile lookup together."""
+        """Bind a Chroma collection and optional trusted employee lookup.
+
+        Args:
+            collection: Chroma collection containing approved document chunks.
+            employee_repository: Optional repository used to load profile groups
+                for ``search``; omitted when groups are already token-verified.
+
+        Returns:
+            None.
+
+        Called by: The FastAPI search handler and local search adapter.
+        """
         self._collection = collection
         self._employee_repository = employee_repository
 
@@ -102,6 +132,17 @@ class DocumentSearchService:
         The employee ID must come from the authenticated backend identity. Access
         groups are fetched internally from the employee repository; the caller
         cannot pass a Chroma filter or permissions list.
+
+        Args:
+            employee_id: Authenticated employee identifier.
+            query: Nonempty semantic search query.
+            n_results: Requested number of results, bounded by ``MAX_RESULTS``.
+
+        Returns:
+            Authorized matching chunks with citation metadata.
+
+        Called by: ``LocalDocumentSearchAdapter.search`` and retrieval API
+            callers that use this service directly.
         """
         if not employee_id or not employee_id.strip():
             raise AuthorizationError("Authenticated employee identity is required.")
@@ -128,7 +169,18 @@ class DocumentSearchService:
         query: str,
         n_results: int = 5,
     ) -> list[DocumentResult]:
-        """Search using groups already verified by the vector API token."""
+        """Search using access groups already verified by the vector API token.
+
+        Args:
+            access_groups: Trusted department groups from the verified token.
+            query: Nonempty semantic search query.
+            n_results: Requested number of results, bounded by ``MAX_RESULTS``.
+
+        Returns:
+            Authorized matching chunks with citation metadata.
+
+        Called by: The FastAPI search handler and ``DocumentSearchService.search``.
+        """
         if not query or not query.strip():
             raise ValueError("Search query must not be empty.")
         if not 1 <= n_results <= MAX_RESULTS:
@@ -155,7 +207,17 @@ def _to_document_results(
     response: dict[str, Any],
     allowed_groups: set[str],
 ) -> list[DocumentResult]:
-    """Convert Chroma's nested response into validated citation result objects."""
+    """Validate Chroma's nested response and convert it to citation objects.
+
+    Args:
+        response: Raw query result returned by Chroma.
+        allowed_groups: Access groups permitted for this search.
+
+    Returns:
+        Validated document results, or an empty list when there are no matches.
+
+    Called by: ``DocumentSearchService.search_for_groups``.
+    """
     documents_by_query = response.get("documents")
     metadata_by_query = response.get("metadatas")
     distances_by_query = response.get("distances")

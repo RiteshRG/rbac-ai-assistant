@@ -21,22 +21,59 @@ class ChromaMiniLMEmbeddings(Embeddings):
     """Adapt Chroma's all-MiniLM-L6-v2 model to LangChain's embedding interface."""
 
     def __init__(self) -> None:
+        """Create the embedding adapter using Chroma's configured ONNX model.
+
+        Args:
+            None.
+
+        Returns:
+            None.
+
+        Called by: ``main`` when constructing the LangChain Chroma store.
+        """
         # Use the same ONNX model that created the vectors already stored in Chroma.
         self._model = ONNXMiniLM_L6_V2()
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
-        """Embed document texts; LangChain calls this when adding documents."""
+        """Convert document texts into vectors for LangChain.
+
+        Args:
+            texts: Document strings to embed.
+
+        Returns:
+            One numeric embedding vector per input document.
+
+        Called by: LangChain when it requests document embeddings.
+        """
         vectors = self._model(texts)
         return [vector.tolist() for vector in vectors]
 
     def embed_query(self, text: str) -> list[float]:
-        """Embed one search question using the same model as the stored chunks."""
+        """Convert one search question into the stored-vector embedding space.
+
+        Args:
+            text: Search question to embed.
+
+        Returns:
+            The numeric embedding vector for the question.
+
+        Called by: LangChain when executing semantic similarity search.
+        """
         vector = self._model([text])[0]
         return vector.tolist()
 
 
 def ask_for_result_count() -> int:
-    """Ask how many nearest chunks to show and validate the user's answer."""
+    """Prompt for and validate the number of nearest chunks to display.
+
+    Args:
+        None.
+
+    Returns:
+        An integer result count from 1 through 20.
+
+    Called by: ``main`` in the developer-only search utility.
+    """
     while True:
         answer = input("How many similar results should I show? (1-20): ").strip()
         try:
@@ -51,7 +88,16 @@ def ask_for_result_count() -> int:
 
 
 def print_results(results: Sequence[tuple[Document, float]]) -> None:
-    """Print each matching chunk, its Chroma distance, and citation metadata."""
+    """Print matching chunks with distance and citation metadata.
+
+    Args:
+        results: Ordered document and distance pairs returned by LangChain.
+
+    Returns:
+        None.
+
+    Called by: ``main`` after the similarity search.
+    """
     if not results:
         print("\nNo matching documents were found.")
         return
@@ -70,7 +116,16 @@ def print_results(results: Sequence[tuple[Document, float]]) -> None:
 
 
 def main() -> None:
-    """Read a query and result count, then print similar stored chunks."""
+    """Run an interactive, all-department local Chroma search.
+
+    Args:
+        None.
+
+    Returns:
+        None.
+
+    Called by: ``python -m vector_service.search_test_app`` or direct CLI use.
+    """
     print("Local ChromaDB search test (developer-only; no user login or RBAC).")
     query = input("\nEnter your search question: ").strip()
     if not query:

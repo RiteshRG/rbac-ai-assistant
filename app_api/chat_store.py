@@ -24,6 +24,7 @@ class FirestoreChatStore:
         database: Any,
         timeout_seconds: float = FIRESTORE_TIMEOUT_SECONDS,
     ) -> None:
+        """Configure Firestore chat persistence; database and timeout_seconds select the store and request timeout; return None; create_app constructs this store."""
         self._database = database
         self._timeout_seconds = timeout_seconds
 
@@ -33,6 +34,7 @@ class FirestoreChatStore:
         policy_version: str,
         limit: int = CHAT_LIST_LIMIT,
     ) -> list[dict[str, Any]]:
+        """List an employee's recent chats and policy-lock state; employee_id, policy_version, and limit scope the query; return chat summaries; the chats route calls this."""
         query = (
             self._database.collection("employees")
             .document(employee_id)
@@ -63,6 +65,7 @@ class FirestoreChatStore:
         policy_version: str,
         limit: int = CHAT_MESSAGE_LIMIT,
     ) -> list[dict[str, Any]]:
+        """Load bounded messages from an employee-owned chat; employee_id, chat_id, policy_version, and limit identify and constrain the read; return message records or raise ChatNotFound or ChatPolicyChanged; the messages route calls this."""
         chat_ref = self._chat_ref(employee_id, chat_id)
         snapshot = chat_ref.get(timeout=self._timeout_seconds)
         if not snapshot.exists:
@@ -86,6 +89,7 @@ class FirestoreChatStore:
         chat_id: str | None,
         policy_version: str,
     ) -> list[dict[str, str]]:
+        """Build bounded, replayable assistant history; employee_id, optional chat_id, and policy_version identify the authorized conversation; return eligible user and successful assistant messages, or an empty list for no chat; the assistant route calls this."""
         if chat_id is None:
             return []
 
@@ -126,6 +130,7 @@ class FirestoreChatStore:
         question: str,
         policy_version: str,
     ) -> str:
+        """Persist a user question, creating a chat when needed; employee_id, optional chat_id, question, and policy_version define ownership and content; return the chat ID or raise chat-policy errors; the assistant route calls this."""
         if chat_id is None:
             chat_ref = self._chat_ref(employee_id, None)
             message_ref = chat_ref.collection("messages").document()
@@ -145,6 +150,7 @@ class FirestoreChatStore:
             )
 
             def create_chat(transaction: Any) -> str:
+                """Create the new chat and first user message; transaction is the active Firestore transaction; return the new chat ID; _run_transaction invokes this callback."""
                 transaction.set(chat_ref, chat_data)
                 transaction.set(message_ref, message_data)
                 return chat_ref.id
@@ -155,6 +161,7 @@ class FirestoreChatStore:
         message_ref = chat_ref.collection("messages").document()
 
         def append_question(transaction: Any) -> str:
+            """Append a user message and advance chat metadata; transaction is the active Firestore transaction; return chat_id; _run_transaction invokes this callback."""
             chat_data = self._read_chat(transaction, chat_ref)
             self._require_current_policy(chat_data, policy_version)
             sequence = self._next_sequence(chat_data)
@@ -187,10 +194,12 @@ class FirestoreChatStore:
         citations: list[str],
         policy_version: str,
     ) -> None:
+        """Persist an assistant response with status and citations; employee_id, chat_id, answer, status, citations, and policy_version define the record; return None or raise chat-policy errors; the assistant route calls this."""
         chat_ref = self._chat_ref(employee_id, chat_id)
         message_ref = chat_ref.collection("messages").document()
 
         def append_answer(transaction: Any) -> None:
+            """Append an assistant message and advance chat metadata; transaction is the active Firestore transaction; return None; _run_transaction invokes this callback."""
             chat_data = self._read_chat(transaction, chat_ref)
             self._require_current_policy(chat_data, policy_version)
             sequence = self._next_sequence(chat_data)
@@ -218,6 +227,7 @@ class FirestoreChatStore:
         self._run_transaction(append_answer)
 
     def _chat_ref(self, employee_id: str, chat_id: str | None) -> Any:
+        """Build an employee-scoped chat document reference; employee_id and optional chat_id identify the document; return a Firestore reference; this store's read and write methods call this."""
         chats = (
             self._database.collection("employees")
             .document(employee_id)
@@ -227,6 +237,7 @@ class FirestoreChatStore:
 
     @staticmethod
     def _read_chat(transaction: Any, chat_ref: Any) -> dict[str, Any]:
+        """Read a chat within a transaction; transaction and chat_ref identify the read; return its data or raise ChatNotFound; transactional writes call this."""
         snapshot = chat_ref.get(transaction=transaction)
         if not snapshot.exists:
             raise ChatNotFound
@@ -234,6 +245,7 @@ class FirestoreChatStore:
 
     @staticmethod
     def _require_current_policy(chat_data: dict[str, Any], policy_version: str) -> None:
+        """Reject deleted or policy-locked chats; chat_data and policy_version provide current and expected state; return None or raise a chat exception; this store calls this before chat access."""
         if chat_data.get("deleted") is True:
             raise ChatNotFound
         if chat_data.get("policy_version", "1") != policy_version:
@@ -241,6 +253,7 @@ class FirestoreChatStore:
 
     @staticmethod
     def _next_sequence(chat_data: dict[str, Any]) -> int:
+        """Compute the next message sequence; chat_data supplies the current count; return the next integer or raise ValueError for invalid data; transactional writes call this."""
         count = chat_data.get("message_count", 0)
         if not isinstance(count, int) or isinstance(count, bool) or count < 0:
             raise ValueError("Chat message count is invalid.")
@@ -253,6 +266,7 @@ class FirestoreChatStore:
         text: str,
         policy_version: str,
     ) -> dict[str, Any]:
+        """Build a common persisted message record; sequence, message_type, text, and policy_version define its content; return the record dictionary; user and assistant save methods call this."""
         return {
             "seq": sequence,
             "type": message_type,
@@ -262,8 +276,10 @@ class FirestoreChatStore:
         }
 
     def _run_transaction(self, operation: Callable[[Any], Any]) -> Any:
+        """Run an operation in a Firestore transaction; operation receives the transaction; return its result; save_user_message and save_assistant_message call this."""
         @firestore.transactional
         def run(transaction: Any) -> Any:
+            """Invoke the supplied operation in Firestore's transaction wrapper; transaction is the active transaction; return the operation result; the Firestore decorator invokes this callback."""
             return operation(transaction)
 
         return run(self._database.transaction())

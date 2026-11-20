@@ -13,6 +13,17 @@ class LlmConfigTests(unittest.TestCase):
     """Verify that the provider flag selects the matching key and model."""
 
     def test_selects_groq_and_its_credentials(self):
+        """Verify selects groq and its credentials.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         environment = {
             "LLM_PROVIDER": "groq",
             "GROQ_API_KEY": "groq-test-key",
@@ -36,6 +47,17 @@ class LlmConfigTests(unittest.TestCase):
         gemini_factory.assert_not_called()
 
     def test_selects_gemini_and_its_credentials(self):
+        """Verify selects gemini and its credentials.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         environment = {
             "LLM_PROVIDER": " GEMINI ",
             "GOOGLE_API_KEY": "gemini-test-key",
@@ -59,6 +81,17 @@ class LlmConfigTests(unittest.TestCase):
         groq_factory.assert_not_called()
 
     def test_missing_selected_provider_key_fails_without_fallback(self):
+        """Verify missing selected provider key fails without fallback.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         environment = {"LLM_PROVIDER": "groq", "GROQ_MODEL": "groq-test-model"}
         with (
             patch.dict(os.environ, environment, clear=True),
@@ -71,6 +104,17 @@ class LlmConfigTests(unittest.TestCase):
         gemini_factory.assert_not_called()
 
     def test_unknown_provider_is_rejected(self):
+        """Verify unknown provider is rejected.
+
+            Parameters:
+                self (`instance`): the current instance and its state.
+
+            Returns:
+                None; unittest records the assertion outcome.
+
+            Called by:
+                unittest test discovery.
+        """
         with (
             patch.dict(os.environ, {"LLM_PROVIDER": "other"}, clear=True),
             patch("llm_config.load_dotenv"),

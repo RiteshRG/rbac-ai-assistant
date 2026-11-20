@@ -31,6 +31,7 @@ class AssistantResult:
 
 class GraphService:
     def __init__(self, employee_repository: Any) -> None:
+        """Store the trusted employee repository for graph authorization; employee_repository provides profile-derived access context; return None; create_app constructs this service."""
         self._employee_repository = employee_repository
 
     def ask(
@@ -39,6 +40,7 @@ class GraphService:
         question: str,
         history: list[dict[str, str]] | None = None,
     ) -> AssistantResult:
+        """Invoke the assistant graph for a single question and normalize its result; employee_id, question, and optional history form the invocation input; return an AssistantResult with normalized status and citations; the assistant route calls this."""
         llm = create_llm()
         graph = build_graph(llm, employee_repository=self._employee_repository)
         result = graph.invoke(

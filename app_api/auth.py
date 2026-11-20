@@ -19,7 +19,9 @@ from app_api.settings import AppSettings
 
 
 class ProfileRepository(Protocol):
-    def get_profile(self, employee_id: str) -> EmployeeProfile | None: ...
+    def get_profile(self, employee_id: str) -> EmployeeProfile | None:
+        """Read an employee profile; employee_id is its identifier; return the profile or None; AuthService and require_employee call this API."""
+        ...
 
 
 class InvalidCredentials(Exception):
@@ -28,6 +30,7 @@ class InvalidCredentials(Exception):
 
 class LoginRateLimited(Exception):
     def __init__(self, retry_after: int) -> None:
+        """Create a rate-limit exception; retry_after is the remaining delay in seconds; return None; LoginThrottle and AuthService.login produce this error."""
         self.retry_after = retry_after
 
 
@@ -42,6 +45,7 @@ class LoginThrottle:
         window_seconds: int = 300,
         max_tracked_ids: int = 10000,
     ) -> None:
+        """Initialize bounded failed-login tracking; max_failures, window_seconds, and max_tracked_ids configure the window and capacity; return None; AuthService creates this service."""
         self._max_failures = max_failures
         self._window_seconds = window_seconds
         self._max_tracked_ids = max_tracked_ids
@@ -49,6 +53,7 @@ class LoginThrottle:
         self._lock = threading.Lock()
 
     def retry_after(self, employee_id: str) -> int:
+        """Check the current lockout for employee_id; return remaining seconds or zero; AuthService.login calls this."""
         now = time.monotonic()
         with self._lock:
             failures = self._failures.get(employee_id)
@@ -64,6 +69,7 @@ class LoginThrottle:
             return max(1, int(self._window_seconds - (now - failures[0]) + 0.999))
 
     def record_failure(self, employee_id: str) -> None:
+        """Record a failed attempt for employee_id; return None; AuthService.login calls this after invalid credentials."""
         now = time.monotonic()
         with self._lock:
             failures = self._failures.setdefault(employee_id, deque())
@@ -74,10 +80,12 @@ class LoginThrottle:
                 self._failures.popitem(last=False)
 
     def record_success(self, employee_id: str) -> None:
+        """Clear failures for employee_id; return None; AuthService.login calls this after success."""
         with self._lock:
             self._failures.pop(employee_id, None)
 
     def _discard_expired(self, failures: deque[float], now: float) -> None:
+        """Remove timestamps older than now minus the configured window; failures and now are the tracked data and clock value; return None; retry_after and record_failure call this."""
         while failures and now - failures[0] >= self._window_seconds:
             failures.popleft()
 
@@ -91,9 +99,11 @@ class LoginResult:
 
 class AppTokenService:
     def __init__(self, settings: AppSettings) -> None:
+        """Store token configuration; settings supplies signing and claim values; return None; AuthService constructs this service."""
         self._settings = settings
 
     def issue(self, employee_id: str) -> str:
+        """Create a signed app token for employee_id; return the encoded token; AuthService.login calls this."""
         now = int(time.time())
         return jwt.encode(
             {
@@ -108,6 +118,7 @@ class AppTokenService:
         )
 
     def verify(self, token: str) -> str:
+        """Validate token claims and signature; token is the encoded app token; return the employee ID or raise InvalidAppToken; AuthService.verify_token calls this."""
         try:
             claims = jwt.decode(
                 token,
@@ -139,6 +150,7 @@ class AuthService:
         settings: AppSettings,
         throttle: LoginThrottle | None = None,
     ) -> None:
+        """Initialize profile lookup, token, and throttle services; repository, settings, and optional throttle configure authentication; return None; create_app constructs this service."""
         self._repository = repository
         self._tokens = AppTokenService(settings)
         self._settings = settings
@@ -146,6 +158,7 @@ class AuthService:
         self._dummy_hash = hash_password(secrets.token_urlsafe(32))
 
     def login(self, employee_id: str, password: str) -> LoginResult:
+        """Authenticate an employee and issue a token; employee_id and password are submitted credentials; return LoginResult or raise an authentication error; the FastAPI login route calls this."""
         normalized_id = employee_id.strip()
         retry_after = self._throttle.retry_after(normalized_id)
         if retry_after:
@@ -178,6 +191,7 @@ class AuthService:
         )
 
     def verify_token(self, token: str) -> str:
+        """Verify an app token; token is the bearer credential; return its employee ID; require_employee calls this."""
         return self._tokens.verify(token)
 
 
@@ -188,6 +202,7 @@ def require_employee(
     request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
 ) -> EmployeeProfile:
+    """Resolve and validate the bearer-authenticated employee; request provides app services and credentials contains the optional bearer token; return the active EmployeeProfile or raise HTTPException; FastAPI dependency injection calls this for protected routes."""
     if credentials is None or credentials.scheme.casefold() != "bearer":
         raise HTTPException(
             status_code=401,
